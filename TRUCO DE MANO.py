@@ -20,8 +20,40 @@ st.set_page_config(page_title="Gestor de Truco Premium", layout="wide", initial_
 # Injeção de CSS Customizado para Identidade Visual de Ultra Contraste
 st.markdown("""
 <style>
+    /* Configuração Geral do App e Textos Básicos */
     .stApp { background-color: #04120a; color: #ffffff; }
-    h1, h2, h3 { color: #ffb703 !important; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 900; }
+    h1, h2, h3, h4, h5, h6 { color: #ffb703 !important; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 900; }
+    
+    /* ------------------------------------------------------------- */
+    /* ELEMENTOS CORRIGIDOS PARA ULTRA CONTRASTE (LETRAS CINZAS)     */
+    /* ------------------------------------------------------------- */
+    
+    /* 1. Força a cor branca em todos os títulos/labels de campos (Inputs, Text Areas, etc) */
+    div[data-testid="stWidgetLabel"] p {
+        color: #ffffff !important;
+        font-weight: bold !important;
+        font-size: 1.05rem !important;
+    }
+
+    /* 2. Corrige o texto cinza das opções do botão de rádio (Modos de Visualização) */
+    div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+
+    /* 3. Corrige o texto das abas (Tabs) desativadas para não sumirem no fundo */
+    button[data-testid="stMarkdownContainer"] p {
+        color: #ffffff !important;
+    }
+    
+    /* 4. Destaca a aba que está atualmente selecionada em Amarelo Ouro */
+    button[aria-selected="true"] div[data-testid="stMarkdownContainer"] p {
+        color: #ffb703 !important;
+        font-weight: bold !important;
+    }
+    /* ------------------------------------------------------------- */
+
+    /* Caixa do Cronômetro Gigante */
     .cronometro-box-gigante {
         background: linear-gradient(135deg, #ff3232, #7a0000);
         border: 4px solid #ffb703;
@@ -32,13 +64,19 @@ st.markdown("""
         box-shadow: 0px 10px 20px rgba(0,0,0,0.6);
     }
     .cronometro-tempo { font-size: 4.5rem !important; font-weight: 900 !important; color: #ffffff !important; font-family: monospace; }
+    
+    /* Componentes de Mesas e Métricas */
     .titulo-mesa-destaque { background-color: #0d301b; color: #ffb703; padding: 10px; border-radius: 8px; font-weight: bold; text-align: center; margin-top: 15px; border: 1px solid #ffb703; }
     .metric-panel { background: #0b2b18; border: 2px solid #69db7c; border-radius: 10px; padding: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
     .metric-val { font-size: 2.2rem; font-weight: 900; color: #ffb703; }
     .metric-lbl { font-size: 0.9rem; color: #69db7c; font-weight: bold; text-transform: uppercase; }
     .chapeu-container-novo { background: linear-gradient(135deg, #1b1b1b, #0a0a0a); border: 3px dashed #ffb703; border-radius: 15px; padding: 20px; text-align: center; margin: 15px 0; }
     .titulo-passo-admin { color: #ffb703 !important; font-size: 1rem !important; font-weight: bold; margin-top: 10px; margin-bottom: 5px; }
+    
+    /* Caixa de Formulários de Cadastro e Lançamento */
     div[data-testid="stForm"] { background-color: #0b2b18 !important; border: 2px solid #ffb703 !important; border-radius: 12px !important; }
+    
+    /* Estilização dos Botões da Tabela de Inscritos */
     .botao-editar button { background-color: #228be6 !important; color: white !important; border-radius: 6px !important; width: 100%; }
     .botao-excluir button { background-color: #fa5252 !important; color: white !important; border-radius: 6px !important; width: 100%; }
 </style>
@@ -75,7 +113,8 @@ def carregar_estado_do_disco():
     if os.path.exists(ARQUIVO_BACKUP):
         try:
             with open(ARQUIVO_BACKUP, "rb") as f:
-                dados = pickle.dump = pickle.load(f)
+                # CORREÇÃO: Limpado o dump acidental que bloqueava a inicialização estável do app
+                dados = pickle.load(f)
                 for k, v in dados.items(): st.session_state[k] = v
         except Exception: pass
 
