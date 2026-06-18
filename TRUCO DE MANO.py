@@ -557,57 +557,27 @@ else:
                 else:
                     # layout de abas para inscrição individual vs em massa (Excel)
                     aba_cad_unico, aba_cad_massa = st.tabs(["👤 Cadastro Individual", "📋 Importar do Excel / Lista"])
-                    
-                    # --- FUNÇÃO DE CALLBACK PARA CADASTRO INDIVIDUAL ---
-                    def cadastrar_individual_callback():
-                        nome_jog = st.session_state.get("txt_individual_nome", "").strip()
-                        ctg_jog = st.session_state.get("txt_individual_ctg", "").strip()
-                        if nome_jog:
-                            texto_completo = f"{nome_jog} | {ctg_jog}" if ctg_jog else nome_jog
-                            if texto_completo not in st.session_state["jogadores"]:
-                                st.session_state["jogadores"].append(texto_completo)
-                                salvar_estado_no_disco()
-                                st.session_state["msg_sucesso_cadastro"] = f"🔹 {texto_completo} cadastrado!"
-                            else:
-                                st.session_state["msg_aviso_cadastro"] = "Este competidor já está cadastrado."
-                        else:
-                            st.session_state["msg_erro_cadastro"] = "O nome do competidor não pode ficar vazio."
-
-                    # --- FUNÇÃO DE CALLBACK PARA CADASTRO EM MASSA ---
-                    def processar_excel_callback():
-                        dados = st.session_state.get("txt_excel_import_final", "")
-                        if dados.strip():
-                            linhas = dados.split("\n")
-                            novos_jogadores = []
-                            for linha in linhas:
-                                if linha.strip():
-                                    if ";" in linha:
-                                        partes = linha.split(";")
-                                        c_nome = partes[0].strip()
-                                        c_ctg = partes[1].strip() if len(partes) > 1 else ""
-                                        registro = f"{c_nome} | {c_ctg}" if c_ctg else c_nome
-                                    else:
-                                        registro = linha.strip()
-                                    
-                                    if registro not in st.session_state["jogadores"] and registro not in novos_jogadores:
-                                        novos_jogadores.append(registro)
-                            
-                            if novos_jogadores:
-                                st.session_state["jogadores"].extend(novos_jogadores)
-                                salvar_estado_no_disco()
-                                st.session_state["msg_sucesso_cadastro"] = f"✔️ {len(novos_jogadores)} competidores importados!"
-                            else:
-                                st.session_state["msg_aviso_cadastro"] = "Nenhum competidor novo para adicionar."
 
                     with aba_cad_unico:
                         col_nj, col_ctg = st.columns([60, 40])
                         with col_nj:
-                            st.text_input("Nome do Competidor:", key="txt_individual_nome")
+                            # Removido o parâmetro key para evitar conflitos de SessionState
+                            nj = st.text_input("Nome do Competidor:")
                         with col_ctg:
-                            st.text_input("Entidade / CTG (Opcional):", key="txt_individual_ctg")
+                            nctg = st.text_input("Entidade / CTG (Opcional):")
                         
-                        # Ativamos o callback seguro
-                        st.button("➕ Cadastrar Competidor", type="secondary", key="btn_cad_individual_direto", on_click=cadastrar_individual_callback)
+                        if st.button("➕ Cadastrar Competidor", type="secondary"):
+                            if nj.strip():
+                                texto_completo = f"{nj.strip()} | {nctg.strip()}" if nctg.strip() else nj.strip()
+                                if texto_completo not in st.session_state["jogadores"]:
+                                    st.session_state["jogadores"].append(texto_completo)
+                                    salvar_estado_no_disco()
+                                    st.success(f"🔹 {texto_completo} cadastrado!")
+                                    st.rerun()
+                                else:
+                                    st.warning("Este competidor já está cadastrado.")
+                            else:
+                                st.error("O nome do competidor não pode ficar vazio.")
                                 
                     with aba_cad_massa:
                         st.markdown("""
@@ -635,18 +605,33 @@ else:
                             </div>
                         """, unsafe_allow_html=True)
                         
-                        st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJoão Silva;CTG Sentinela\nPedro Souza;CTG Farroupilha", key="txt_excel_import_final")
+                        # Mantida apenas uma atribuição simples sem chaves que travam o renderizador
+                        lista_colada = st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJoão Silva;CTG Sentinela\nPedro Souza;CTG Farroupilha")
                         
-                        # Ativamos o callback seguro
-                        st.button("📥 Processar e Inserir Lista", type="primary", key="btn_importar_massa_final", on_click=processar_excel_callback)
-                    
-                    # Exibe os alertas de feedback definidos nos Callbacks (limpando o estado logo após)
-                    if "msg_sucesso_cadastro" in st.session_state:
-                        st.success(st.session_state.pop("msg_sucesso_cadastro"))
-                    if "msg_aviso_cadastro" in st.session_state:
-                        st.warning(st.session_state.pop("msg_aviso_cadastro"))
-                    if "msg_erro_cadastro" in st.session_state:
-                        st.error(st.session_state.pop("msg_erro_cadastro"))
+                        if st.button("📥 Processar e Inserir Lista", type="primary"):
+                            if lista_colada.strip():
+                                linhas = lista_colada.split("\n")
+                                novos_jogadores = []
+                                for linha in linhas:
+                                    if linha.strip():
+                                        if ";" in linha:
+                                            partes = linha.split(";")
+                                            c_nome = partes[0].strip()
+                                            c_ctg = partes[1].strip() if len(partes) > 1 else ""
+                                            registro = f"{c_nome} | {c_ctg}" if c_ctg else c_nome
+                                        else:
+                                            registro = linha.strip()
+                                        
+                                        if registro not in st.session_state["jogadores"] and registro not in novos_jogadores:
+                                            novos_jogadores.append(registro)
+                                
+                                if novos_jogadores:
+                                    st.session_state["jogadores"].extend(novos_jogadores)
+                                    salvar_estado_no_disco()
+                                    st.success(f"✔️ {len(novos_jogadores)} competidores importados com sucesso!")
+                                    st.rerun()
+                                else:
+                                    st.warning("Nenhum competidor novo para adicionar.")
                             
             st.write(f"**Competidores Registrados ({len(st.session_state['jogadores'])}):**")
             if st.session_state["jogadores"]:
@@ -682,6 +667,7 @@ else:
             with c_m3:
                 rei_f = "Ninguém" if st.session_state["classificacao"] is None else str(st.session_state["classificacao"]['Flores'].idxmax())
                 st.markdown(f'<div class="metric-panel"><div class="metric-val">🌸 {rei_f[:12]}</div><div class="metric-lbl">Líder das Flores</div></div>', unsafe_allow_html=True)
+                
 # ==========================================
 # PLAYOFFS, AUDITORIA E HONRA (PARTE 4)
 # ==========================================
