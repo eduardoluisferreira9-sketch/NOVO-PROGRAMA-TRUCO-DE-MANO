@@ -25,7 +25,30 @@ st.markdown("""
     h1, h2, h3, h4, h5, h6 { color: #ffb703 !important; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 900; }
     
     /* ------------------------------------------------------------- */
-    /* CORREÇÃO DO TEXTO APAGADO (LABELS E ABAS)                      */
+    /* NOVA AJUSTE: CORREÇÃO DO PAINEL DO DIRETOR (SIDEBAR)          */
+    /* ------------------------------------------------------------- */
+    /* Transforma a barra lateral cinza no visual escuro do torneio */
+    section[data-testid="stSidebar"] {
+        background-color: #030d07 !important;
+        border-right: 2px solid #ffb703 !important;
+    }
+    
+    /* Garante contraste para todos os textos e labels da barra lateral */
+    section[data-testid="stSidebar"] p, 
+    section[data-testid="stSidebar"] span, 
+    section[data-testid="stSidebar"] label {
+        color: #ffffff !important;
+    }
+    
+    /* Destaca títulos dentro da barra lateral em Amarelo */
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        color: #ffb703 !important;
+    }
+    
+    /* ------------------------------------------------------------- */
+    /* ELEMENTOS DE ULTRA CONTRASTE DA ARENA CORRIGIDOS              */
     /* ------------------------------------------------------------- */
     
     /* Força os títulos "Nome do Evento" e "Nome do Competidor" a ficarem em Branco Puro */
@@ -58,7 +81,6 @@ st.markdown("""
         color: #ffffff !important;
         font-weight: 600 !important;
     }
-    /* ------------------------------------------------------------- */
 
     /* Caixa do Cronômetro Gigante */
     .cronometro-box-gigante {
@@ -120,7 +142,6 @@ def carregar_estado_do_disco():
     if os.path.exists(ARQUIVO_BACKUP):
         try:
             with open(ARQUIVO_BACKUP, "rb") as f:
-                # CORREÇÃO: Limpado o dump acidental que bloqueava a inicialização estável do app
                 dados = pickle.load(f)
                 for k, v in dados.items(): st.session_state[k] = v
         except Exception: pass
@@ -130,7 +151,6 @@ def limpar_placares_memoria():
     st.session_state["semente_reset"] = st.session_state.get("semente_reset", 1) + 1
 
 carregar_estado_do_disco()
-
 
 # ==========================================
 # RECALCULADOR MATRIZ E CHAVES (PARTE 2)
