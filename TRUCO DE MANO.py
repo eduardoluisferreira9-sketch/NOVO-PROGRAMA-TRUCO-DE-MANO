@@ -590,147 +590,138 @@ else:
             st.markdown("### 🎮 Inscrições de Competidores")
             nome_t = st.text_input("Nome do Evento:", value="Torneio de Truco do CTG")
             
-            if is_admin:
-                if st.session_state.get("jogador_sendo_editado") is not None:
-                    idx_edit = st.session_state["jogador_sendo_editado"]
-                    jog_atual = st.session_state["jogadores"][idx_edit]
-                    
-                    p_nome = jog_atual["nome"]
-                    p_ctg = jog_atual["entidade"] if jog_atual["entidade"] != "AVULSO" else ""
-                    
-                    with st.form("form_edicao"):
-                        novo_nome = st.text_input("Corrigir Nome:", value=p_nome)
-                        novo_ctg = st.text_input("Corrigir Entidade / CTG:", value=p_ctg)
-                        col_b1, col_b2 = st.columns(2)
-                        with col_b1:
-                            if st.form_submit_button("💾 Salvar") and novo_nome.strip():
-                                jog_atual["nome"] = str(novo_nome).upper().strip()
-                                jog_atual["entidade"] = str(novo_ctg).upper().strip() if novo_ctg.strip() else "AVULSO"
-                                st.session_state["jogadores"][idx_edit] = jog_atual
-                                st.session_state["jogador_sendo_editado"] = None
-                                salvar_estado_no_disco()
-                                st.rerun()
-                        with col_b2:
-                            if st.form_submit_button("❌ Cancelar"): 
-                                st.session_state["jogador_sendo_editado"] = None
-                                st.rerun()
-                else:
-                    aba_cad_unico, aba_cad_massa = st.tabs(["👤 Cadastro Individual", "📋 Importar do Excel / Lista"])
+            # Sub-Abas de Cadastro
+            aba_cad_unico, aba_cad_massa = st.tabs(["👤 Cadastro Individual", "📋 Importar do Excel / Lista"])
 
-                    with aba_cad_unico:
-                        col_nj, col_ctg = st.columns([60, 40])
-                        with col_nj:
-                            nj = st.text_input("Nome do Competidor:")
-                        with col_ctg:
-                            nctg = st.text_input("Entidade / CTG (Opcional):")
+            with aba_cad_unico:
+                col_nj, col_ctg = st.columns([60, 40])
+                with col_nj:
+                    nj = st.text_input("Nome do Competidor:")
+                with col_ctg:
+                    nctg = st.text_input("Entidade / CTG (Opcional):")
+                
+                if st.button("➕ Cadastrar Competidor", type="secondary"):
+                    if nj.strip():
+                        nome_limpo = str(nj).upper().strip()
+                        ctg_limpo = str(nctg).upper().strip() if nctg.strip() else "AVULSO"
                         
-                        if st.button("➕ Cadastrar Competidor", type="secondary"):
-                            if nj.strip():
-                                nome_limpo = str(nj).upper().strip()
-                                ctg_limpo = str(nctg).upper().strip() if nctg.strip() else "AVULSO"
-                                
-                                # Evita duplicidade real validando o campo string do nome
-                                nomes_existentes = [j["nome"] for j in st.session_state["jogadores"]]
-                                if nome_limpo not in nomes_existentes:
+                        nomes_existentes = [j["nome"] for j in st.session_state["jogadores"]]
+                        if nome_limpo not in nomes_existentes:
+                            novo_id = len(st.session_state["jogadores"]) + 1
+                            st.session_state["jogadores"].append({
+                                "id": novo_id,
+                                "nome": nome_limpo,
+                                "entidade": ctg_limpo
+                            })
+                            salvar_estado_no_disco()
+                            st.success(f"🔹 {nome_limpo} [{ctg_limpo}] cadastrado!")
+                            st.rerun()
+                        else:
+                            st.warning("Este competidor já está cadastrado.")
+                    else:
+                        st.error("O nome do competidor não pode ficar vazio.")
+                        
+            with aba_cad_massa:
+                st.markdown("""
+                    <style>
+                        div[data-baseweb="textarea"] textarea {
+                            color: #ffffff !important;
+                            background-color: #05180e !important;
+                            border: 1px solid #ffb703 !important;
+                            font-family: monospace;
+                        }
+                        div[data-baseweb="textarea"] {
+                            background-color: #05180e !important;
+                            border-radius: 6px;
+                        }
+                    </style>
+                """, unsafe_allow_html=True)
+
+                st.markdown("""
+                    <div style="background-color:#0d301b; border: 2px solid #ffb703; padding:15px; border-radius:10px; margin-bottom:15px;">
+                        <h4 style="color:#ffb703; margin-top:0; margin-bottom:10px;">📋 Importação Rápida de Planilha</h4>
+                        <p style="color:#ffffff; font-size:0.9rem; margin:0;">
+                            💡 No seu Excel, selecione as colunas de <b>Nome</b> e <b>CTG</b>, copie (Ctrl+C) e cole no campo abaixo.<br>
+                            O sistema aceita o formato contendo ponto e vírgula <b>Nome;CTG</b> ou apenas o <b>Nome</b> por linha.
+                        </p>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                lista_colada = st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJOÃO SILVA;CTG SENTINELA\nPEDRO SOUZA;CTG FARROUPILHA")
+                
+                if st.button("📥 Processar e Inserir Lista", type="primary"):
+                    if lista_colada.strip():
+                        linhas = lista_colada.split("\n")
+                        cont_importados = 0
+                        nomes_existentes = [j["nome"] for j in st.session_state["jogadores"]]
+                        
+                        for linha in linhas:
+                            if linha.strip():
+                                if ";" in linha:
+                                    partes = linha.split(";")
+                                    c_nome = str(partes[0]).upper().strip()
+                                    c_ctg = str(partes[1]).upper().strip() if len(partes) > 1 and partes[1].strip() else "AVULSO"
+                                else:
+                                    c_nome = str(linha).upper().strip()
+                                    c_ctg = "AVULSO"
+                                    
+                                if c_nome and c_nome not in nomes_existentes:
                                     novo_id = len(st.session_state["jogadores"]) + 1
                                     st.session_state["jogadores"].append({
                                         "id": novo_id,
-                                        "nome": nome_limpo,
-                                        "entidade": ctg_limpo
+                                        "nome": c_nome,
+                                        "entidade": c_ctg
                                     })
-                                    salvar_estado_no_disco()
-                                    st.success(f"🔹 {nome_limpo} [{ctg_limpo}] cadastrado!")
-                                    st.rerun()
-                                else:
-                                    st.warning("Este competidor já está cadastrado.")
-                            else:
-                                st.error("O nome do competidor não pode ficar vazio.")
-                                
-                    with aba_cad_massa:
-                        st.markdown("""
-                            <style>
-                                div[data-baseweb="textarea"] textarea {
-                                    color: #ffffff !important;
-                                    background-color: #05180e !important;
-                                    border: 1px solid #ffb703 !important;
-                                    font-family: monospace;
-                                }
-                                div[data-baseweb="textarea"] {
-                                    background-color: #05180e !important;
-                                    border-radius: 6px;
-                                }
-                            </style>
-                        """, unsafe_allow_html=True)
-
-                        st.markdown("""
-                            <div style="background-color:#0d301b; border: 2px solid #ffb703; padding:15px; border-radius:10px; margin-bottom:15px;">
-                                <h4 style="color:#ffb703; margin-top:0; margin-bottom:10px;">📋 Importação Rápida de Planilha</h4>
-                                <p style="color:#ffffff; font-size:0.9rem; margin:0;">
-                                    💡 No seu Excel, selecione as colunas de <b>Nome</b> e <b>CTG</b>, copie (Ctrl+C) e cole no campo abaixo.<br>
-                                    O sistema aceita o formato contendo ponto e vírgula <b>Nome;CTG</b> ou apenas o <b>Nome</b> por linha.
-                                </p>
-                            </div>
-                        """, unsafe_allow_html=True)
+                                    nomes_existentes.append(c_nome)
+                                    cont_importados += 1
                         
-                        lista_colada = st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJOÃO SILVA;CTG SENTINELA\nPEDRO SOUZA;CTG FARROUPILHA")
-                        
-                        if st.button("📥 Processar e Inserir Lista", type="primary"):
-                            if lista_colada.strip():
-                                linhas = lista_colada.split("\n")
-                                cont_importados = 0
-                                nomes_existentes = [j["nome"] for j in st.session_state["jogadores"]]
-                                
-                                for linha in linhas:
-                                    if linha.strip():
-                                        if ";" in linha:
-                                            partes = linha.split(";")
-                                            c_nome = str(partes[0]).upper().strip()
-                                            c_ctg = str(partes[1]).upper().strip() if len(partes) > 1 and partes[1].strip() else "AVULSO"
-                                        else:
-                                            c_nome = str(linha).upper().strip()
-                                            c_ctg = "AVULSO"
-                                            
-                                        if c_nome and c_nome not in nomes_existentes:
-                                            novo_id = len(st.session_state["jogadores"]) + 1
-                                            st.session_state["jogadores"].append({
-                                                "id": novo_id,
-                                                "nome": c_nome,
-                                                "entidade": c_ctg
-                                            })
-                                            nomes_existentes.append(c_nome)
-                                            cont_importados += 1
-                                
-                                if cont_importados > 0:
-                                    salvar_estado_no_disco()
-                                    st.success(f"✔️ {cont_importados} competidores mapeados e adicionados de forma limpa!")
-                                    st.rerun()
-                                else:
-                                    st.warning("Nenhum competidor novo identificado na lista.")
-                            
+                        if cont_importados > 0:
+                            salvar_estado_no_disco()
+                            st.success(f"✔️ {cont_importados} competidores mapeados e adicionados de forma limpa!")
+                            st.rerun()
+                        else:
+                            st.warning("Nenhum competidor novo identificado na lista.")
+                                    
             st.write(f"**Competidores Registrados ({len(st.session_state['jogadores'])}):**")
+            
             if st.session_state["jogadores"]:
+                # Converte para DataFrame estruturado
+                df_jogadores = pd.DataFrame(st.session_state["jogadores"])[["id", "nome", "entidade"]]
+                
                 if is_admin:
-                    for idx, jogador in enumerate(st.session_state["jogadores"]):
-                        nome_exibicao = f"{jogador['nome']} | {jogador['entidade']}" if jogador['entidade'] != "AVULSO" else jogador['nome']
-
-                        c_nome, c_edit, c_excluir = st.columns([70, 15, 15])
-                        with c_nome: 
-                            st.markdown(f"<p style='padding:8px; background-color:#0d301b; border-radius:6px; font-weight:bold; border: 1px solid #ffb703;'>🔹 {nome_exibicao}</p>", unsafe_allow_html=True)
-                        with c_edit:
-                            st.markdown('<div class="botao-editar">', unsafe_allow_html=True)
-                            if st.button("✏️", key=f"btn_edit_{idx}"): 
-                                st.session_state["jogador_sendo_editado"] = idx
-                                st.rerun()
-                            st.markdown('</div>', unsafe_allow_html=True)
-                        with c_excluir:
-                            st.markdown('<div class="botao-excluir">', unsafe_allow_html=True)
-                            if st.button("🗑️", key=f"btn_del_{idx}"):
-                                st.session_state["jogadores"].pop(idx)
-                                salvar_estado_no_disco()
-                                st.rerun()
-                            st.markdown('</div>', unsafe_allow_html=True)
+                    st.info("💡 **Gerenciador Ativo:** Dê dois cliques em uma célula para editar o Nome/CTG. Selecione a linha clicando na lateral esquerda e aperte 'Delete' no teclado para excluir um competidor.")
+                    
+                    # Planilha interativa à prova de erros de concorrência
+                    df_editado = st.data_editor(
+                        df_jogadores,
+                        column_config={
+                            "id": st.column_config.NumberColumn("ID", disabled=True, width="small"),
+                            "nome": st.column_config.TextColumn("Nome do Competidor", required=True),
+                            "entidade": st.column_config.TextColumn("Entidade / CTG"),
+                        },
+                        hide_index=True,
+                        num_rows="dynamic",
+                        use_container_width=True,
+                        key="editor_competidores_tabela"
+                    )
+                    
+                    # Reconstrói e higieniza a lista mapeada se houver modificações na tabela
+                    lista_sincronizada = []
+                    for idx, row in df_editado.iterrows():
+                        if str(row["nome"]).strip():
+                            lista_sincronizada.append({
+                                "id": int(row["id"]) if pd.notna(row["id"]) else len(lista_sincronizada) + 1,
+                                "nome": str(row["nome"]).upper().strip(),
+                                "entidade": str(row["entidade"]).upper().strip() if pd.notna(row["entidade"]) and str(row["entidade"]).strip() else "AVULSO"
+                            })
+                    
+                    if lista_sincronizada != st.session_state["jogadores"]:
+                        st.session_state["jogadores"] = lista_sincronizada
+                        salvar_estado_no_disco()
+                        st.rerun()
                 else: 
-                    st.info(", ".join([j["nome"] for j in st.session_state["jogadores"]]))
+                    # Exibição estática limpa para modo espectador público
+                    st.dataframe(df_jogadores, hide_index=True, use_container_width=True)
                 
             if is_admin and len(st.session_state["jogadores"]) >= 4:
                 st.markdown("---")
@@ -738,7 +729,6 @@ else:
                 if st.button("🃏 GERAR CHAVES E DISPARAR TORNEIO"):
                     st.session_state["nome_torneio"] = nome_t
                     
-                    # Extrai a lista limpa e unificada para o DataFrame de Classificação Oficial
                     jogadores_limpos = [str(j["nome"]).upper().strip() for j in st.session_state["jogadores"]]
                     
                     st.session_state["classificacao"] = pd.DataFrame({
@@ -750,7 +740,7 @@ else:
                     gerar_rodada_web()
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
-
+                
 # ==========================================
 # ARENA DE CONFRONTOS E MATAMATA (PARTE 4)
 # ==========================================
