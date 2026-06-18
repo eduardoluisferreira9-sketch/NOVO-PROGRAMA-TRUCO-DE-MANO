@@ -669,23 +669,31 @@ else:
                 else: 
                     st.info(", ".join([j.get('nome', str(j)) if isinstance(j, dict) else str(j) for j in st.session_state["jogadores"]]))
                 
-            if is_admin and len(st.session_state["jogadores"]) >= 4:
+           if is_admin and len(st.session_state["jogadores"]) >= 4:
                 st.markdown("---")
                 
-                # --- CSS EXCLUSIVO INJETADO PARA FORÇAR O TEXTO ESCURO NO BOTÃO DE DISPARAR ---
+                # --- CSS ULTRA FORÇADO ATACANDO A CLASSE NATIVA DO STREAMLIT ---
                 st.markdown("""
                     <style>
-                        div.botao-grande-comando button {
+                        /* Alvo exato no botão padrão do Streamlit dentro da nossa div */
+                        div.botao-grande-comando .stButton > button {
                             color: #05180e !important;
-                            font-weight: 900 !important;
                             background-color: #ffffff !important;
                             border: 2px solid #ffb703 !important;
+                            font-weight: 900 !important;
                             width: 100% !important;
                             padding: 10px !important;
                         }
-                        div.botao-grande-comando button:hover {
+                        /* Alvo exato no efeito Hover */
+                        div.botao-grande-comando .stButton > button:hover {
                             color: #ffffff !important;
                             background-color: #ffb703 !important;
+                            border: 2px solid #ffb703 !important;
+                        }
+                        /* Alvo protetor para quando o botão estiver em foco/clicado */
+                        div.botao-grande-comando .stButton > button:focus {
+                            color: #05180e !important;
+                            background-color: #ffffff !important;
                         }
                     </style>
                 """, unsafe_allow_html=True)
@@ -712,15 +720,6 @@ else:
                     st.session_state["torneio_iniciado"] = True
                     gerar_rodada_web(); st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
-        else:
-            c_m1, c_m2, c_m3 = st.columns(3)
-            with c_m1: st.markdown(f'<div class="metric-panel"><div class="metric-val">{len(st.session_state["jogadores"])}</div><div class="metric-lbl">Inscritos na Arena</div></div>', unsafe_allow_html=True)
-            with c_m2:
-                fase_txt = f"Rodada {st.session_state['rodada_atual']} / 5" if not st.session_state["em_matamata"] else str(st.session_state["fase_matamata"])
-                st.markdown(f'<div class="metric-panel"><div class="metric-val">{fase_txt}</div><div class="metric-lbl">Estágio Atual</div></div>', unsafe_allow_html=True)
-            with c_m3:
-                rei_f = "Ninguém" if st.session_state["classificacao"] is None else str(st.session_state["classificacao"]['Flores'].idxmax())
-                st.markdown(f'<div class="metric-panel"><div class="metric-val">🌸 {rei_f[:12]}</div><div class="metric-lbl">Líder das Flores</div></div>', unsafe_allow_html=True)
                 
 # ==========================================
 # PLAYOFFS, AUDITORIA E HONRA (PARTE 4)
