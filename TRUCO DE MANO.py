@@ -529,7 +529,7 @@ if modo_exibicao == "🖥️ MODO TELÃO DE PROJETOR (Automático)":
 else:
     aba_arena, aba_tabela, aba_historico = st.tabs(["⚔️ Arena de Confrontos", "📊 Classificação & Auditoria", "📜 Galeria de Campeões"])
 
-    with aba_arena:
+   with aba_arena:
         if not st.session_state["torneio_iniciado"]:
             st.markdown("### 🎮 Inscrições de Competidores")
             nome_t = st.text_input("Nome do Evento:", value="Torneio de Truco do CTG")
@@ -613,7 +613,7 @@ else:
                                 for linha in linhas:
                                     if linha.strip():
                                         if ";" in linha:
-                                            partes = inline.split(";")
+                                            partes = linha.split(";")  # CORRIGIDO: mudado inline para linha
                                             c_nome = partes[0].strip()
                                             c_ctg = partes[1].strip() if len(partes) > 1 else ""
                                             registro = f"{c_nome} | {c_ctg}" if c_ctg else c_nome
@@ -669,13 +669,13 @@ else:
                 else: 
                     st.info(", ".join([j.get('nome', str(j)) if isinstance(j, dict) else str(j) for j in st.session_state["jogadores"]]))
                 
-           if is_admin and len(st.session_state["jogadores"]) >= 4:
+            # --- ALINHADO CORRETAMENTE NO NÍVEL DO 'st.write' ---
+            if is_admin and len(st.session_state["jogadores"]) >= 4:
                 st.markdown("---")
                 
                 # --- CSS ULTRA FORÇADO ATACANDO A CLASSE NATIVA DO STREAMLIT ---
                 st.markdown("""
                     <style>
-                        /* Alvo exato no botão padrão do Streamlit dentro da nossa div */
                         div.botao-grande-comando .stButton > button {
                             color: #05180e !important;
                             background-color: #ffffff !important;
@@ -684,13 +684,11 @@ else:
                             width: 100% !important;
                             padding: 10px !important;
                         }
-                        /* Alvo exato no efeito Hover */
                         div.botao-grande-comando .stButton > button:hover {
                             color: #ffffff !important;
                             background-color: #ffb703 !important;
                             border: 2px solid #ffb703 !important;
                         }
-                        /* Alvo protetor para quando o botão estiver em foco/clicado */
                         div.botao-grande-comando .stButton > button:focus {
                             color: #05180e !important;
                             background-color: #ffffff !important;
@@ -701,7 +699,6 @@ else:
                 st.markdown('<div class="botao-grande-comando">', unsafe_allow_html=True)
                 if st.button("🃏 GERAR CHAVES E DISPARAR TORNEIO"):
                     st.session_state["nome_torneio"] = nome_t
-                    # Tratamento extra na hora de criar o DataFrame de classificação
                     jogadores_limpos = []
                     for j in st.session_state["jogadores"]:
                         if isinstance(j, dict): 
