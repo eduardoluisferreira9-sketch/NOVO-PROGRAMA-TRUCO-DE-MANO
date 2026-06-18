@@ -560,17 +560,25 @@ else:
                     aba_cad_unico, aba_cad_massa = st.tabs(["👤 Cadastro Individual", "📋 Importar do Excel / Lista"])
                     
                     with aba_cad_unico:
-                        with st.form("cad_individual", clear_on_submit=True):
-                            col_nj, col_ctg = st.columns([60, 40])
-                            with col_nj:
-                                nj = st.text_input("Nome do Competidor:")
-                            with col_ctg:
-                                nctg = st.text_input("Entidade / CTG (Opcional):")
-                            
-                            if st.form_submit_button("➕ Cadastrar Competidor") and nj:
+                        col_nj, col_ctg = st.columns([60, 40])
+                        with col_nj:
+                            nj = st.text_input("Nome do Competidor:", key="txt_individual_nome")
+                        with col_ctg:
+                            nctg = st.text_input("Entidade / CTG (Opcional):", key="txt_individual_ctg")
+                        
+                        # Botão comum substitui o st.form_submit_button para liberar o session_state
+                        if st.button("➕ Cadastrar Competidor", type="secondary", key="btn_cad_individual_direto"):
+                            if nj.strip():
                                 texto_completo = f"{nj.strip()} | {nctg.strip()}" if nctg.strip() else nj.strip()
-                                st.session_state["jogadores"].append(texto_completo)
-                                salvar_estado_no_disco(); st.rerun()
+                                if texto_completo not in st.session_state["jogadores"]:
+                                    st.session_state["jogadores"].append(texto_completo)
+                                    salvar_estado_no_disco()
+                                    st.success(f"🔹 {texto_completo} cadastrado!")
+                                    st.rerun()
+                                else:
+                                    st.warning("Este competidor já está cadastrado.")
+                            else:
+                                st.error("O nome do competidor não pode ficar vazio.")
                                 
                     with aba_cad_massa:
                         # Estilização forçada para a caixa de texto não ficar branca com texto branco
@@ -600,18 +608,13 @@ else:
                             </div>
                         """, unsafe_allow_html=True)
                         
-                        # Criamos um container isolado para a caixa e o botão saírem do escopo do outro formulário
-                        container_massa = st.container()
-                        with container_massa:
-                            lista_colada = st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJoão Silva;CTG Sentinela\nPedro Souza;CTG Farroupilha", key="txt_excel_import_novo")
-                            btn_processar = st.button("📥 Processar e Inserir Lista", type="primary", key="btn_importar_massa_seguro")
+                        lista_colada = st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJoão Silva;CTG Sentinela\nPedro Souza;CTG Farroupilha", key="txt_excel_import_final")
                         
-                        if btn_processar:
+                        if st.button("📥 Processar e Inserir Lista", type="primary", key="btn_importar_massa_final"):
                             if lista_colada.strip():
                                 linhas = lista_colada.split("\n")
                                 novos_jogadores = []
                                 
-                                # Processa primeiro em uma lista temporária para isolar a escrita do st.session_state
                                 for linha in linhas:
                                     if linha.strip():
                                         if ";" in linha:
@@ -625,7 +628,6 @@ else:
                                         if registro not in st.session_state["jogadores"] and registro not in novos_jogadores:
                                             novos_jogadores.append(registro)
                                 
-                                # Se houver novos jogadores, estendemos a lista original de uma vez só
                                 if novos_jogadores:
                                     st.session_state["jogadores"].extend(novos_jogadores)
                                     salvar_estado_no_disco()
