@@ -527,7 +527,7 @@ with st.sidebar:
             salvar_estado_no_disco()
             st.rerun()
             
-        # 🚨 BOTÃO DE RESET TOTAL DO TORNEIO
+        # 🚨 ZONA DE RESET TOTAL DO TORNEIO (SIDEBAR)
         st.markdown("---")
         st.markdown("### ⚠️ Zona de Perigo")
         if st.button("🚨 RESETAR TODO O TORNEIO", type="primary", use_container_width=True):
@@ -540,6 +540,8 @@ with st.sidebar:
                 st.session_state["placares_rodada_atual"] = {}
             if "confrontos" in st.session_state:
                 st.session_state["confrontos"] = []
+            if "classificacao" in st.session_state:
+                st.session_state["classificacao"] = None
             salvar_estado_no_disco()
             st.rerun()
 
@@ -604,16 +606,27 @@ else:
             st.markdown("### 🎮 Inscrições de Competidores")
             nome_t = st.text_input("Nome do Evento:", value="Torneio de Truco do CTG", key="nome_torneio_input")
             
-            aba_cad_unico, aba_cad_massa = st.tabs(["👤 Cadastro Individual", "📋 Importar do Excel / Lista"])
+            # Sub-abas de Inscrição e Gerenciamento
+            abas_internas = ["👤 Cadastro Unificado", "📋 Importar Lista/Excel"]
+            if is_admin:
+                abas_internas.extend(["✏️ Editar Competidor", "❌ Excluir Competidor"])
+                
+            abas_cadastro = st.tabs(abas_internas)
 
-            with aba_cad_unico:
+            # --- ABA 1: CADASTRO UNIFICADO (PÚBLICO E ADM) ---
+            with abas_cadastro[0]:
+                if is_admin:
+                    st.caption("⚡ Você está cadastrando como Administrador")
+                else:
+                    st.caption("👋 Bem-vindo! Digite seus dados abaixo para se inscrever no torneio.")
+                    
                 col_nj, col_ctg = st.columns([60, 40])
                 with col_nj:
                     nj = st.text_input("Nome do Competidor:", key="input_cad_unico_nome")
                 with col_ctg:
                     nctg = st.text_input("Entidade / CTG (Opcional):", key="input_cad_unico_ctg")
                 
-                if st.button("➕ Cadastrar Competidor", type="secondary", key="btn_cad_individual"):
+                if st.button("➕ Confirmar Inscrição", type="secondary", key="btn_cad_individual"):
                     if nj.strip():
                         nome_limpo = str(nj).upper().strip()
                         ctg_limpo = str(nctg).upper().strip() if nctg.strip() else "AVULSO"
@@ -627,14 +640,15 @@ else:
                                 "entidade": ctg_limpo
                             })
                             salvar_estado_no_disco()
-                            st.success(f"🔹 {nome_limpo} [{ctg_limpo}] cadastrado!")
+                            st.success(f"🎉 {nome_limpo} de [{ctg_limpo}] foi inscrito com sucesso!")
                             st.rerun()
                         else:
                             st.warning("Este competidor já está cadastrado.")
                     else:
                         st.error("O nome do competidor não pode ficar vazio.")
                         
-            with aba_cad_massa:
+            # --- ABA 2: IMPORTAR EXCEL ---
+            with abas_cadastro[1]:
                 st.markdown("""
                     <style>
                         div[data-baseweb="textarea"] textarea {
@@ -645,18 +659,9 @@ else:
                         }
                     </style>
                 """, unsafe_allow_html=True)
-
-                st.markdown("""
-                    <div style="background-color:#0d301b; border: 2px solid #ffb703; padding:15px; border-radius:10px; margin-bottom:15px;">
-                        <h4 style="color:#ffb703; margin-top:0; margin-bottom:10px;">📋 Importação Rápida de Planilha</h4>
-                        <p style="color:#ffffff; font-size:0.9rem; margin:0;">
-                            💡 No seu Excel, selecione as colunas de <b>Nome</b> e <b>CTG</b>, copie (Ctrl+C) e cole no campo abaixo.
-                        </p>
-                    </div>
-                """, unsafe_allow_html=True)
+                st.info("💡 Cole as colunas de Nome e CTG vindas do seu Excel. Aceita formato 'Nome;CTG' ou um nome por linha.")
                 
-                # Sem st.form para evitar conflitos de escopo com o data_editor
-                lista_colada = st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJOÃO SILVA;CTG SENTINELA", key="txt_area_excel_direto")
+                lista_colada = st.text_area("Dados Copiados:", height=120, placeholder="JOÃO SILVA;CTG SENTINELA\nPEDRO SOUZA;AVULSO", key="txt_area_excel_direto")
                 
                 if st.button("📥 Processar e Inserir Lista", type="primary", key="btn_processar_excel_direto"):
                     if lista_colada.strip():
@@ -665,7 +670,7 @@ else:
                         nomes_existentes = [str(j["nome"]).upper().strip() for j in st.session_state["jogadores"]]
                         
                         for linha in linhas:
-                            linha_limpa =  linha.strip()
+                            linha_limpa = linha.strip()
                             if linha_limpa:
                                 if ";" in linha_limpa:
                                     partes = linha_limpa.split(";")
@@ -687,45 +692,71 @@ else:
                         
                         if cont_importados > 0:
                             salvar_estado_no_disco()
+                            st.success(f"✔️ {cont_importados} competidores importados!")
                             st.rerun()
-                                    
-            st.write(f"**Competidores Registrados ({len(st.session_state['jogadores'])}):**")
+
+            # --- ABAS EXCLUSIVAS DO ADMINISTRADOR (SÓ APARECEM SE LOGADO) ---
+            if is_admin:
+                # --- ABA 3: EDITAR JOGADOR ---
+                with abas_cadastro[2]:
+                    if st.session_state["jogadores"]:
+                        opcoes_edicao = {f"{j['nome']} [{j['entidade']}]": j for j in st.session_state["jogadores"]}
+                        selecionado_edicao = st.selectbox("Selecione quem deseja modificar:", list(opcoes_edicao.keys()), key="sb_editar_jogador")
+                        
+                        jogador_alvo = opcoes_edicao[selecionado_edicao]
+                        
+                        col_ed_n, col_ed_c = st.columns([60, 40])
+                        with col_ed_n:
+                            novo_nome_input = st.text_input("Corrigir Nome:", value=jogador_alvo["nome"], key="edit_nome_field")
+                        with col_ed_c:
+                            nova_ent_input = st.text_input("Corrigir Entidade:", value=jogador_alvo["entidade"], key="edit_ent_field")
+                            
+                        if st.button("💾 Salvar Alterações", type="primary", key="btn_salvar_edicao"):
+                            if novo_nome_input.strip():
+                                for j in st.session_state["jogadores"]:
+                                    if j["id"] == jogador_alvo["id"]:
+                                        j["nome"] = str(novo_nome_input).upper().strip()
+                                        j["entidade"] = str(nova_ent_input).upper().strip() if nova_ent_input.strip() else "AVULSO"
+                                salvar_estado_no_disco()
+                                st.success("Alterações salvas!")
+                                st.rerun()
+                    else:
+                        st.info("Nenhum competidor registrado para editar.")
+
+                # --- ABA 4: EXCLUIR JOGADOR ---
+                with abas_cadastro[3]:
+                    if st.session_state["jogadores"]:
+                        opcoes_exclusao = {f"{j['nome']} [{j['entidade']}]": j for j in st.session_state["jogadores"]}
+                        selecionado_exclusao = st.selectbox("Selecione quem deseja remover do torneio:", list(opcoes_exclusao.keys()), key="sb_deletar_jogador")
+                        
+                        jogador_remover = opcoes_exclusao[selecionado_exclusao]
+                        
+                        st.warning(f"⚠️ Tem certeza que deseja remover permanentemente {jogador_remover['nome']}?")
+                        if st.button("❌ Confirmar Exclusão", type="primary", key="btn_confirmar_exclusao"):
+                            st.session_state["jogadores"] = [j for j in st.session_state["jogadores"] if j["id"] != jogador_remover["id"]]
+                            
+                            # Reajusta os IDs para ficarem sequenciais
+                            for idx, j in enumerate(st.session_state["jogadores"]):
+                                j["id"] = idx + 1
+                                
+                            salvar_estado_no_disco()
+                            st.success("Competidor removido com sucesso!")
+                            st.rerun()
+                    else:
+                        st.info("Nenhum competidor registrado para excluir.")
+
+            # --- LISTA VISUAL APENAS PARA LEITURA ---
+            st.markdown("---")
+            st.write(f"### 📋 Lista de Inscritos Registrados ({len(st.session_state['jogadores'])}):")
             
             if st.session_state["jogadores"]:
-                df_jogadores = pd.DataFrame(st.session_state["jogadores"])[["id", "nome", "entidade"]]
+                # Exibição em lista de texto limpa, sem usar tabelas interativas
+                for j in st.session_state["jogadores"]:
+                    st.markdown(f"**{j['id']}.** {j['nome']} — *{j['entidade']}*")
+            else:
+                st.info("Nenhum competidor inscrito até o momento.")
                 
-                if is_admin:
-                    st.info("💡 **Gerenciador Ativo:** Edite as células ou selecione a linha e aperte 'Delete'.")
-                    
-                    df_editado = st.data_editor(
-                        df_jogadores,
-                        column_config={
-                            "id": st.column_config.NumberColumn("ID", disabled=True, width="small"),
-                            "nome": st.column_config.TextColumn("Nome do Competidor", required=True),
-                            "entidade": st.column_config.TextColumn("Entidade / CTG"),
-                        },
-                        hide_index=True,
-                        num_rows="dynamic",
-                        use_container_width=True,
-                        key="editor_competidores_tabela"
-                    )
-                    
-                    lista_sincronizada = []
-                    for idx, row in df_editado.iterrows():
-                        if str(row["nome"]).strip():
-                            lista_sincronizada.append({
-                                "id": int(row["id"]) if pd.notna(row["id"]) else len(lista_sincronizada) + 1,
-                                "nome": str(row["nome"]).upper().strip(),
-                                "entidade": str(row["entidade"]).upper().strip() if pd.notna(row["entidade"]) and str(row["entidade"]).strip() else "AVULSO"
-                            })
-                    
-                    if lista_sincronizada != st.session_state["jogadores"]:
-                        st.session_state["jogadores"] = lista_sincronizada
-                        salvar_estado_no_disco()
-                        st.rerun()
-                else: 
-                    st.dataframe(df_jogadores, hide_index=True, use_container_width=True)
-                
+            # --- DISPARADOR DO TORNEIO ---
             if is_admin and len(st.session_state["jogadores"]) >= 4:
                 st.markdown("---")
                 st.markdown('<div class="botao-grande-comando">', unsafe_allow_html=True)
@@ -739,7 +770,7 @@ else:
                     st.session_state["torneio_iniciado"] = True
                     gerar_rodada_web()
                     st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)       
                 
 # ==========================================
 # ARENA DE CONFRONTOS E MATAMATA (PARTE 4)
