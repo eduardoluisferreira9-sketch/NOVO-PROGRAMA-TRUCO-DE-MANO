@@ -572,7 +572,7 @@ else:
                                 st.session_state["jogadores"].append(texto_completo)
                                 salvar_estado_no_disco(); st.rerun()
                                 
-                    with aba_cad_massa:
+                   with aba_cad_massa:
                         # Estilização forçada para a caixa de texto não ficar branca com texto branco
                         st.markdown("""
                             <style>
@@ -600,12 +600,18 @@ else:
                             </div>
                         """, unsafe_allow_html=True)
                         
-                        lista_colada = st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJoão Silva;CTG Sentinela\nPedro Souza;CTG Farroupilha", key="txt_excel_import")
+                        # Criamos um container isolado para a caixa e o botão saírem do escopo do outro formulário
+                        container_massa = st.container()
+                        with container_massa:
+                            lista_colada = st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJoão Silva;CTG Sentinela\nPedro Souza;CTG Farroupilha", key="txt_excel_import_novo")
+                            btn_processar = st.button("📥 Processar e Inserir Lista", type="primary", key="btn_importar_massa_seguro")
                         
-                        if st.button("📥 Processar e Inserir Lista", type="primary"):
+                        if btn_processar:
                             if lista_colada.strip():
                                 linhas = lista_colada.split("\n")
-                                cont_importados = 0
+                                novos_jogadores = []
+                                
+                                # Processa primeiro em uma lista temporária para isolar a escrita do st.session_state
                                 for linha in linhas:
                                     if linha.strip():
                                         if ";" in linha:
@@ -616,12 +622,15 @@ else:
                                         else:
                                             registro = linha.strip()
                                         
-                                        if registro not in st.session_state["jogadores"]:
-                                            st.session_state["jogadores"].append(registro)
-                                            cont_importados += 1
-                                if cont_importados > 0:
-                                    st.success(f"✔️ {cont_importados} competidores importados com sucesso!")
-                                    salvar_estado_no_disco(); st.rerun()
+                                        if registro not in st.session_state["jogadores"] and registro not in novos_jogadores:
+                                            novos_jogadores.append(registro)
+                                
+                                # Se houver novos jogadores, estendemos a lista original de uma vez só
+                                if novos_jogadores:
+                                    st.session_state["jogadores"].extend(novos_jogadores)
+                                    salvar_estado_no_disco()
+                                    st.success(f"✔️ {len(novos_jogadores)} competidores importados com sucesso!")
+                                    st.rerun()
                                 else:
                                     st.warning("Nenhum competidor novo para adicionar.")
                             
