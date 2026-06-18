@@ -180,6 +180,29 @@ def limpar_placares_memoria():
 carregar_estado_do_disco()
 
 # ==========================================
+# BOTÃO TEMPORÁRIO PARA LIMPAR BACKUP ANTIGO
+# ==========================================
+with st.sidebar:
+    st.write("---")
+    if st.button("🚨 ATUALIZAR BANCO DE DADOS (RESET)", use_container_width=True):
+        # Limpa o estado atual da memória
+        st.session_state["jogadores"] = []
+        st.session_state["torneio_iniciado"] = False
+        st.session_state["classificacao"] = None
+        st.session_state["historico_rodadas"] = {}
+        st.session_state["placares_rodada_atual"] = {}
+        
+        # Apaga fisicamente o arquivo antigo se ele existir no servidor
+        if os.path.exists(ARQUIVO_BACKUP):
+            try:
+                os.remove(ARQUIVO_BACKUP)
+            except Exception:
+                pass
+                
+        st.success("Banco de dados limpo com sucesso! Agora a nova estrutura está ativa.")
+        st.rerun()
+
+# ==========================================
 # RECALCULADOR MATRIZ E CHAVES (PARTE 2)
 # ==========================================
 def reconstruir_classificacao_global():
