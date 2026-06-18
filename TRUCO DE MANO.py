@@ -206,24 +206,34 @@ with st.sidebar:
 # RECALCULADOR MATRIZ E CHAVES (PARTE 2)
 # ==========================================
 def reconstruir_classificacao_global():
+    # Extrai a lista de nomes únicos para montar a tabela de classificação
+    nomes_jogadores = [j["nome"] for j in st.session_state["jogadores"]]
+    
     st.session_state["classificacao"] = pd.DataFrame({
-        'Jogador': st.session_state["jogadores"], 'Vitorias': 0, 'Sets_Ganhos': 0, 
+        'Jogador': nomes_jogadores, 'Vitorias': 0, 'Sets_Ganhos': 0, 
         'Tentos_Pro': 0, 'Tentos_Contra': 0, 'Saldo_Tentos': 0, 'Flores': 0
     }).set_index('Jogador')
     
     for r_num, mesas in st.session_state["historico_rodadas"].items():
         for m_id, dados in mesas.items():
             if dados.get("is_chapeu", False):
-                st.session_state["classificacao"].loc[dados["j1"], ['Vitorias', 'Sets_Ganhos', 'Tentos_Pro']] += [1, 3, 72]
+                j1_nome = dados["j1"]["nome"] if isinstance(dados["j1"], dict) else dados["j1"]
+                if j1_nome in st.session_state["classificacao"].index:
+                    st.session_state["classificacao"].loc[j1_nome, ['Vitorias', 'Sets_Ganhos', 'Tentos_Pro']] += [1, 3, 72]
             else:
                 j1, j2 = dados["j1"], dados["j2"]
+                j1_nome = j1["nome"] if isinstance(j1, dict) else j1
+                j2_nome = j2["nome"] if isinstance(j2, dict) else j2
+                
                 s1, s2, t1, t2, f1, f2 = dados["s1"], dados["s2"], dados["t1"], dados["t2"], dados["f1"], dados["f2"]
                 s1_c = 3 if (s1 == 2 and s2 == 0) else s1
                 s2_c = 3 if (s2 == 2 and s1 == 0) else s2
                 v1, v2 = (1, 0) if s1 > s2 else (0, 1)
                 
-                st.session_state["classificacao"].loc[j1, ['Vitorias','Sets_Ganhos','Tentos_Pro','Tentos_Contra','Flores']] += [v1, s1_c, t1, t2, f1]
-                st.session_state["classificacao"].loc[j2, ['Vitorias','Sets_Ganhos','Tentos_Pro','Tentos_Contra','Flores']] += [v2, s2_c, t2, t1, f2]
+                if j1_nome in st.session_state["classificacao"].index:
+                    st.session_state["classificacao"].loc[j1_nome, ['Vitorias','Sets_Ganhos','Tentos_Pro','Tentos_Contra','Flores']] += [v1, s1_c, t1, t2, f1]
+                if j2_nome in st.session_state["classificacao"].index:
+                    st.session_state["classificacao"].loc[j2_nome, ['Vitorias','Sets_Ganhos','Tentos_Pro','Tentos_Contra','Flores']] += [v2, s2_c, t2, t1, f2]
                 
     st.session_state["classificacao"]['Saldo_Tentos'] = st.session_state["classificacao"]['Tentos_Pro'] - st.session_state["classificacao"]['Tentos_Contra']
     salvar_estado_no_disco()
@@ -235,14 +245,19 @@ def gerar_rodada_web():
         random.shuffle(lista_rodada)
     else:
         df_ord = st.session_state["classificacao"].sort_values(by=['Vitorias', 'Sets_Ganhos', 'Saldo_Tentos'], ascending=False)
-        lista_rodada = list(df_ord.index)
+        # Reassocia os nomes ordenados aos dicionários completos correspondentes
+        mapa_jogadores = {j["nome"]: j for j in st.session_state["jogadores"]}
+        lista_rodada = [mapa_jogadores[nome] for nome in df_ord.index if nome in mapa_jogadores]
 
     st.session_state["confrontos"] = []
+    
+    # Tratamento do Chapéu com a nova estrutura de dicionários
     if len(lista_rodada) % 2 != 0:
-        cand = [j for j in lista_rodada if j not in st.session_state["jogadores_no_chapeu"]]
+        nomes_no_chapeu = {j["nome"] if isinstance(j, dict) else j for j in st.session_state["jogadores_no_chapeu"]}
+        cand = [j for j in lista_rodada if (j["nome"] if isinstance(j, dict) else j) not in nomes_no_chapeu]
         chapeu = random.choice(cand if cand else lista_rodada)
         lista_rodada.remove(chapeu)
-        st.session_state["jogadores_no_chapeu"].add(chapeu)
+        st.session_state["jogadores_no_chapeu"].add(chapeu["nome"] if isinstance(chapeu, dict) else chapeu)
         st.session_state["confrontos"].append((chapeu, "CHAPÉU (Folga)"))
 
     contador_mesa = 1
@@ -307,13 +322,20 @@ def salvar_mudanca_retroativa(r_alvo, m_id, j1, j2):
     reconstruir_classificacao_global()
 
 def desenhar_mesa_planta_baixa(j1, j2, mesa_num, s1, t1, f1, s2, t2, f2, tipo_jogo="normal"):
+    # Extrai o nome e entidade de forma segura se forem dicionários
+    j1_nome = j1["nome"] if isinstance(j1, dict) else str(j1)
+    j1_entidade = j1["entidade"] if isinstance(j1, dict) else ""
+    
+    j2_nome = j2["nome"] if isinstance(j2, dict) else str(j2)
+    j2_entidade = j2["entidade"] if isinstance(j2, dict) else ""
+
     animacao_css = ""
     if tipo_jogo == "final":
         borda_cor = "#ffb703" 
         bg_topo = "linear-gradient(135deg, #ffb703, #b8860b)"
         texto_topo = "#000000"
         tag_titulo = "👑 GRANDE FINAL ABSOLUTA 👑"
-        card_height = "420px"
+        card_height = "440px"
         fonte_jogadores = "1.5rem"
         animacao_css = "animation: pulsarFinal 2s infinite ease-in-out;"
     elif tipo_jogo == "3place":
@@ -321,22 +343,26 @@ def desenhar_mesa_planta_baixa(j1, j2, mesa_num, s1, t1, f1, s2, t2, f2, tipo_jo
         bg_topo = "linear-gradient(135deg, #cd7f32, #8b5a2b)"
         texto_topo = "#ffffff"
         tag_titulo = "🥉 DISPUTA DE 3º LUGAR 🥉"
-        card_height = "400px"
+        card_height = "420px"
         fonte_jogadores = "1.3rem"
     elif (s1 == 2 or s2 == 2):
         borda_cor = "#2b8a3e" 
         bg_topo = "#124027"
         texto_topo = "#ffffff"
         tag_titulo = f"🎰 MESA {mesa_num} (CONCLUÍDO)"
-        card_height = "350px"
+        card_height = "370px"
         fonte_jogadores = "1.1rem"
     else:
         borda_cor = "#e67e22" 
         bg_topo = "#2c1e11"
         texto_topo = "#ffffff"
         tag_titulo = f"🎰 MESA {mesa_num}"
-        card_height = "350px"
+        card_height = "370px"
         fonte_jogadores = "1.1rem"
+
+    # Monta as strings de entidade estilizadas se elas existirem
+    ent1_html = f'<div style="font-size: 0.8rem; color: #ffb703; font-weight: bold; margin-top: 2px;">🔰 {j1_entidade}</div>' if j1_entidade else ""
+    ent2_html = f'<div style="font-size: 0.8rem; color: #ffb703; font-weight: bold; margin-top: 2px;">🔰 {j2_entidade}</div>' if j2_entidade else ""
 
     html_mesa = f"""
     <style>
@@ -350,7 +376,8 @@ def desenhar_mesa_planta_baixa(j1, j2, mesa_num, s1, t1, f1, s2, t2, f2, tipo_jo
         
         <div style="text-align: center; width: 100%;">
             <div style="font-size: 0.75rem; color: #69db7c; font-weight: bold; text-transform: uppercase;">🧔 Jogador 1</div>
-            <div style="background: #04120a; color: #ffffff; padding: 6px 15px; border-radius: 8px; font-size: {fonte_jogadores}; font-weight: 900; display: inline-block; border: 1px solid #ffb703; max-width: 85%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{j1}</div>
+            <div style="background: #04120a; color: #ffffff; padding: 6px 15px; border-radius: 8px; font-size: {fonte_jogadores}; font-weight: 900; display: inline-block; border: 1px solid #ffb703; max-width: 85%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{j1_nome}</div>
+            {ent1_html}
         </div>
         
         <div style="background-color: #04120a; border: 2px solid {borda_cor}; border-radius: 12px; padding: 10px; width: 90%; text-align: center; box-shadow: inset 0 2px 5px rgba(0,0,0,0.6);">
@@ -366,7 +393,8 @@ def desenhar_mesa_planta_baixa(j1, j2, mesa_num, s1, t1, f1, s2, t2, f2, tipo_jo
         </div>
         
         <div style="text-align: center; width: 100%;">
-            <div style="background: #04120a; color: #ffffff; padding: 6px 15px; border-radius: 8px; font-size: {fonte_jogadores}; font-weight: 900; display: inline-block; border: 1px solid #ffb703; max-width: 85%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{j2}</div>
+            <div style="background: #04120a; color: #ffffff; padding: 6px 15px; border-radius: 8px; font-size: {fonte_jogadores}; font-weight: 900; display: inline-block; border: 1px solid #ffb703; max-width: 85%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{j2_nome}</div>
+            {ent2_html}
             <div style="font-size: 0.75rem; color: #69db7c; font-weight: bold; text-transform: uppercase; margin-top: 2px;">🧔 Jogador 2</div>
         </div>
     </div>
@@ -376,12 +404,17 @@ def desenhar_mesa_planta_baixa(j1, j2, mesa_num, s1, t1, f1, s2, t2, f2, tipo_jo
 def renderizar_formulario_mesa_admin(m, j1, j2, sem_id):
     p = st.session_state["placares_rodada_atual"].get(m, [0,0,0,0,0,0,False])
     s1, s2, t1, t2, f1, f2 = p[0], p[1], p[2], p[3], p[4], p[5]
+    
+    # Resolve nomes amigáveis para as labels do formulário
+    j1_label = j1["nome"] if isinstance(j1, dict) else str(j1)
+    j2_label = j2["nome"] if isinstance(j2, dict) else str(j2)
+    
     c1, c2 = st.columns([1, 1])
     
     with c1:
         st.markdown(f"<h4 class='titulo-passo-admin'>• SETS (Passo 1)</h4>", unsafe_allow_html=True)
-        s1_in = st.number_input(f"Sets - {j1}", 0, 2, int(s1), key=f"dir_s1_{m}_r{sem_id}", on_change=disparar_atualizacao_placar, args=(m, j1, j2))
-        s2_in = st.number_input(f"Sets - {j2}", 0, 2, int(s2), key=f"dir_s2_{m}_r{sem_id}", on_change=disparar_atualizacao_placar, args=(m, j1, j2))
+        s1_in = st.number_input(f"Sets - {j1_label}", 0, 2, int(s1), key=f"dir_s1_{m}_r{sem_id}", on_change=disparar_atualizacao_placar, args=(m, j1, j2))
+        s2_in = st.number_input(f"Sets - {j2_label}", 0, 2, int(s2), key=f"dir_s2_{m}_r{sem_id}", on_change=disparar_atualizacao_placar, args=(m, j1, j2))
 
     jogo_encerrado = (s1_in == 2 or s2_in == 2)
     
@@ -391,18 +424,18 @@ def renderizar_formulario_mesa_admin(m, j1, j2, sem_id):
         else:
             st.markdown(f"<h4 class='titulo-passo-admin'>• TENTOS (Passo 2)</h4>", unsafe_allow_html=True)
             if s1_in == 2 and s2_in == 0:
-                st.number_input(f"Tentos - {j2} (Máx: 46)", 0, 46, min(int(t2), 46), key=f"dir_t2_{m}_r{sem_id}_2x0j1", on_change=disparar_atualizacao_placar, args=(m, j1, j2))
+                st.number_input(f"Tentos - {j2_label} (Máx: 46)", 0, 46, min(int(t2), 46), key=f"dir_t2_{m}_r{sem_id}_2x0j1", on_change=disparar_atualizacao_placar, args=(m, j1, j2))
             elif s2_in == 2 and s1_in == 0:
-                st.number_input(f"Tentos - {j1} (Máx: 46)", 0, 46, min(int(t1), 46), key=f"dir_t1_{m}_r{sem_id}_2x0j2", on_change=disparar_atualizacao_placar, args=(m, j1, j2))
+                st.number_input(f"Tentos - {j1_label} (Máx: 46)", 0, 46, min(int(t1), 46), key=f"dir_t1_{m}_r{sem_id}_2x0j2", on_change=disparar_atualizacao_placar, args=(m, j1, j2))
             else:
                 t1_val_str = "" if (t1 == 72 or t1 == 0) else str(t1)
                 t2_val_str = "" if (t2 == 72 or t2 == 0) else str(t2)
-                st.text_input(f"Tentos - {j1}", value=t1_val_str, key=f"dir_t1_{m}_r{sem_id}_2x1", on_change=disparar_atualizacao_placar, args=(m, j1, j2), placeholder="Tentos...")
-                st.text_input(f"Tentos - {j2}", value=t2_val_str, key=f"dir_t2_{m}_r{sem_id}_2x1", on_change=disparar_atualizacao_placar, args=(m, j1, j2), placeholder="Tentos...")
+                st.text_input(f"Tentos - {j1_label}", value=t1_val_str, key=f"dir_t1_{m}_r{sem_id}_2x1", on_change=disparar_atualizacao_placar, args=(m, j1, j2), placeholder="Tentos...")
+                st.text_input(f"Tentos - {j2_label}", value=t2_val_str, key=f"dir_t2_{m}_r{sem_id}_2x1", on_change=disparar_atualizacao_placar, args=(m, j1, j2), placeholder="Tentos...")
             
             st.markdown(f"<h4 class='titulo-passo-admin'>• FLORES (Passo 3)</h4>", unsafe_allow_html=True)
-            st.number_input(f"Flores - {j1}", 0, 20, int(f1), key=f"dir_f1_{m}_r{sem_id}", on_change=disparar_atualizacao_placar, args=(m, j1, j2))
-            st.number_input(f"Flores - {j2}", 0, 20, int(f2), key=f"dir_f2_{m}_r{sem_id}", on_change=disparar_atualizacao_placar, args=(m, j1, j2))
+            st.number_input(f"Flores - {j1_label}", 0, 20, int(f1), key=f"dir_f1_{m}_r{sem_id}", on_change=disparar_atualizacao_placar, args=(m, j1, j2))
+            st.number_input(f"Flores - {j2_label}", 0, 20, int(f2), key=f"dir_f2_{m}_r{sem_id}", on_change=disparar_atualizacao_placar, args=(m, j1, j2))
 
 
 # ==========================================
