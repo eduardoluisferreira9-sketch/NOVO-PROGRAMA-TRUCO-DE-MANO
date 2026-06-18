@@ -25,31 +25,38 @@ st.markdown("""
     h1, h2, h3, h4, h5, h6 { color: #ffb703 !important; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 900; }
     
     /* ------------------------------------------------------------- */
-    /* ELEMENTOS CORRIGIDOS PARA ULTRA CONTRASTE (LETRAS CINZAS)     */
+    /* CORREÇÃO DO TEXTO APAGADO (LABELS E ABAS)                      */
     /* ------------------------------------------------------------- */
     
-    /* 1. Força a cor branca em todos os títulos/labels de campos (Inputs, Text Areas, etc) */
-    div[data-testid="stWidgetLabel"] p {
+    /* Força os títulos "Nome do Evento" e "Nome do Competidor" a ficarem em Branco Puro */
+    div[data-testid="stWidgetLabel"] p, 
+    label[data-testid="stWidgetLabel"] p,
+    .st-emotion-cache-q8s8vi p,
+    .st-emotion-cache-q8s8vi {
         color: #ffffff !important;
         font-weight: bold !important;
         font-size: 1.05rem !important;
     }
 
-    /* 2. Corrige o texto cinza das opções do botão de rádio (Modos de Visualização) */
-    div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {
-        color: #ffffff !important;
-        font-weight: 600 !important;
-    }
-
-    /* 3. Corrige o texto das abas (Tabs) desativadas para não sumirem no fundo */
-    button[data-testid="stMarkdownContainer"] p {
+    /* Força o texto das abas (Tabs) desativadas/secundárias a ficarem visíveis em Branco */
+    button[data-testid="stMarkdownContainer"] p,
+    .stTabs button p,
+    .st-emotion-cache-6t18gh p {
         color: #ffffff !important;
     }
     
-    /* 4. Destaca a aba que está atualmente selecionada em Amarelo Ouro */
-    button[aria-selected="true"] div[data-testid="stMarkdownContainer"] p {
+    /* Mantém e destaca a Aba Ativa (Selecionada) em Amarelo Ouro */
+    button[aria-selected="true"] p,
+    button[aria-selected="true"] div[data-testid="stMarkdownContainer"] p,
+    .stTabs button[aria-selected="true"] p {
         color: #ffb703 !important;
         font-weight: bold !important;
+    }
+
+    /* Garante que as opções do botão de rádio (Modos de Tela) fiquem em Branco */
+    div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {
+        color: #ffffff !important;
+        font-weight: 600 !important;
     }
     /* ------------------------------------------------------------- */
 
