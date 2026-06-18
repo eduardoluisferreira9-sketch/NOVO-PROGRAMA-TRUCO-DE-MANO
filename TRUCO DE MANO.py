@@ -572,7 +572,7 @@ else:
                                 st.session_state["jogadores"].append(texto_completo)
                                 salvar_estado_no_disco(); st.rerun()
                                 
-                   with aba_cad_massa:
+                    with aba_cad_massa:
                         # Estilização forçada para a caixa de texto não ficar branca com texto branco
                         st.markdown("""
                             <style>
