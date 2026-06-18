@@ -800,8 +800,11 @@ else:
                             st.write("**Situação da Mesa**")
                             mesa_finalizada = st.checkbox("Mesa Encerrada", value=bool(p[6]), key=f"encerrada_{cont_m}")
                         
-                        # Atualiza o estado na memória e no arquivo de forma reativa
-                        st.session_state["placares_rodada_atual"][str(cont_m)] = [s1_j1, s1_j2, s2_j1, s2_j2, s3_j1, s3_j2, mesa_finalizada]
+                        # Detecta se houve mudança para persistir dados imediatamente no disco
+                        novo_placar = [s1_j1, s1_j2, s2_j1, s2_j2, s3_j1, s3_j2, mesa_finalizada]
+                        if st.session_state["placares_rodada_atual"].get(str(cont_m)) != novo_placar:
+                            st.session_state["placares_rodada_atual"][str(cont_m)] = novo_placar
+                            salvar_estado_no_disco()
                         
                         # Renderização visual da mesa abaixo dos inputs para conferência
                         desenhar_mesa_planta_baixa(j1, j2, str(cont_m), s1_j1, s2_j1, s3_j1, s1_j2, s2_j2, s3_j2, tipo_jogo="normal")
@@ -812,7 +815,6 @@ else:
                 if is_admin:
                     st.markdown('<div class="botao-grande-comando">', unsafe_allow_html=True)
                     if st.button("🏁 COMPUTAR RESULTADOS E AVANÇAR"):
-                        # Validação para garantir integridade antes de fechar a rodada
                         todas_fechadas = True
                         for m in range(1, cont_m):
                             if not st.session_state["placares_rodada_atual"].get(str(m), [0,0,0,0,0,0,False])[6]:
@@ -821,7 +823,6 @@ else:
                         if not todas_fechadas:
                             st.error("⚠️ Não é possível avançar: Existem mesas ativas que ainda não foram marcadas como 'Mesa Encerrada'.")
                         else:
-                            # Executa a função estruturada na Parte 2
                             fechar_rodada_web()
                             st.success("Rodada processada e salva com sucesso!")
                             st.rerun()
@@ -854,7 +855,10 @@ else:
                         st.write("**Status**")
                         mesa_finalizada = st.checkbox("Encerrado", value=bool(p[6]), key=f"mm_encerrada_{id_mesa}")
                         
-                    st.session_state["placares_rodada_atual"][id_mesa] = [s1_j1, s1_j2, s2_j1, s2_j2, s3_j1, s3_j2, mesa_finalizada]
+                    novo_placar_mm = [s1_j1, s1_j2, s2_j1, s2_j2, s3_j1, s3_j2, mesa_finalizada]
+                    if st.session_state["placares_rodada_atual"].get(id_mesa) != novo_placar_mm:
+                        st.session_state["placares_rodada_atual"][id_mesa] = novo_placar_mm
+                        salvar_estado_no_disco()
                     
                     desenhar_mesa_planta_baixa(c["j1"], c["j2"], id_mesa, s1_j1, s2_j1, s3_j1, s1_j2, s2_j2, s3_j2, tipo_jogo=tipo_partida)
                     st.markdown("---")
@@ -874,13 +878,23 @@ else:
     # --- ABAS DE CONSULTA PÚBLICA (CLASSIFICAÇÃO & HISTÓRICO) ---
     with aba_tabela:
         st.markdown("### 📊 Classificação Geral Impulsionada (Pontos Corridos)")
-        if "classificacao" in st.session_state and not st.session_state["classificacao"].empty:
-            # Garante ordenação oficial com critérios de desempate corretos do Truco do CTG
-            df_exibicao = st.session_state["classificacao"].sort_values(
-                by=['Vitorias', 'Sets_Ganhos', 'Saldo_Tentos', 'Tentos_Pro'], 
-                ascending=[False, False, False, False]
-            )
-            st.dataframe(df_exibicao, use_container_width=True)
+        if "classificacao" in st.session_state and st.session_state["classificacao"] is not None:
+            dados_classif = st.session_state["classificacao"]
+            
+            # Tratamento híbrido: Aceita dicionário do JSON ou DataFrame ativo na memória
+            if isinstance(dados_classif, dict):
+                df_exibicao = pd.DataFrame.from_dict(dados_classif, orient='index') if dados_classif else pd.DataFrame()
+            else:
+                df_exibicao = dados_classif
+
+            if not df_exibicao.empty:
+                df_ordenado = df_exibicao.sort_values(
+                    by=['Vitorias', 'Sets_Ganhos', 'Saldo_Tentos', 'Tentos_Pro'], 
+                    ascending=[False, False, False, False]
+                )
+                st.dataframe(df_ordenado, use_container_width=True)
+            else:
+                st.info("A tabela de classificação estará visível assim que a primeira rodada for disparada.")
         else:
             st.info("A tabela de classificação estará visível assim que a primeira rodada for disparada.")
 
