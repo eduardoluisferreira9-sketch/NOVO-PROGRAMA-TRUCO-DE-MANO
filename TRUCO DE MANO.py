@@ -121,14 +121,14 @@ st.markdown("""
     /* Caixa de Formulários de Cadastro e Lançamento */
     div[data-testid="stForm"] { background-color: #0b2b18 !important; border: 2px solid #ffb703 !important; border-radius: 12px !important; }
     
-    /* Estilização dos Botões da Tabela de Inscritos */
+   /* Estilização dos Botões da Tabela de Inscritos */
     .botao-editar button { background-color: #228be6 !important; color: white !important; border-radius: 6px !important; width: 100%; }
     .botao-excluir button { background-color: #fa5252 !important; color: white !important; border-radius: 6px !important; width: 100%; }
 </style>
 """, unsafe_allow_html=True)
 
-# Inicialização do Estado Interno (Session State)
-if "jogadores" not in st.session_state: st.session_state["jogadores"] = []
+# Inicialização do Estado Interno (Session State) - ESTRUTURA ATUALIZADA
+if "jogadores" not in st.session_state: st.session_state["jogadores"] = []  # Agora guardará {"id": X, "nome": "X", "entidade": "X"}
 if "torneio_iniciado" not in st.session_state: st.session_state["torneio_iniciado"] = False
 if "rodada_atual" not in st.session_state: st.session_state["rodada_atual"] = 1
 if "confrontos" not in st.session_state: st.session_state["confrontos"] = []
@@ -159,7 +159,18 @@ def carregar_estado_do_disco():
         try:
             with open(ARQUIVO_BACKUP, "rb") as f:
                 dados = pickle.load(f)
-                for k, v in dados.items(): st.session_state[k] = v
+                for k, v in dados.items(): 
+                    st.session_state[k] = v
+                
+                # CONVERSOR DE SEGURANÇA: Se houver dados antigos em formato de texto, converte para dicionário
+                if "jogadores" in st.session_state and st.session_state["jogadores"]:
+                    lista_atualizada = []
+                    for i, jog in enumerate(st.session_state["jogadores"]):
+                        if isinstance(jog, str):
+                            lista_atualizada.append({"id": i + 1, "nome": jog.upper(), "entidade": "AVULSO"})
+                        else:
+                            lista_atualizada.append(jog)
+                    st.session_state["jogadores"] = lista_atualizada
         except Exception: pass
 
 def limpar_placares_memoria():
