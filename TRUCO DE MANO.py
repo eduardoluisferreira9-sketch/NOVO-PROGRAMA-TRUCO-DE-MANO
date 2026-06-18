@@ -647,22 +647,26 @@ else:
                     </div>
                 """, unsafe_allow_html=True)
                 
-                lista_colada = st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJOÃO SILVA;CTG SENTINELA\nPEDRO SOUZA;CTG FARROUPILHA")
+                # Form isolado para garantir retenção de memória e sanitização de carriage returns (\r)
+                with st.form("form_importacao_excel", clear_on_submit=True):
+                    lista_colada = st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJOÃO SILVA;CTG SENTINELA\nPEDRO SOUZA;CTG FARROUPILHA")
+                    botao_processar = st.form_submit_button("📥 Processar e Inserir Lista", type="primary")
                 
-                if st.button("📥 Processar e Inserir Lista", type="primary"):
+                if botao_processar:
                     if lista_colada.strip():
-                        linhas = lista_colada.split("\n")
+                        linhas = lista_colada.replace("\r", "").split("\n")
                         cont_importados = 0
-                        nomes_existentes = [j["nome"] for j in st.session_state["jogadores"]]
+                        nomes_existentes = [str(j["nome"]).upper().strip() for j in st.session_state["jogadores"]]
                         
                         for linha in linhas:
-                            if linha.strip():
-                                if ";" in linha:
-                                    partes = linha.split(";")
+                            linha_limpa = linha.strip()
+                            if linha_limpa:
+                                if ";" in linha_limpa:
+                                    partes = linha_limpa.split(";")
                                     c_nome = str(partes[0]).upper().strip()
                                     c_ctg = str(partes[1]).upper().strip() if len(partes) > 1 and partes[1].strip() else "AVULSO"
                                 else:
-                                    c_nome = str(linha).upper().strip()
+                                    c_nome = str(linha_limpa).upper().strip()
                                     c_ctg = "AVULSO"
                                     
                                 if c_nome and c_nome not in nomes_existentes:
@@ -677,21 +681,19 @@ else:
                         
                         if cont_importados > 0:
                             salvar_estado_no_disco()
-                            st.success(f"✔️ {cont_importados} competidores mapeados e adicionados de forma limpa!")
+                            st.toast(f"✔️ {cont_importados} novos competidores adicionados!", icon="🚀")
                             st.rerun()
                         else:
-                            st.warning("Nenhum competidor novo identificado na lista.")
+                            st.warning("Nenhum competidor novo ou inédito identificado na lista.")
                                     
             st.write(f"**Competidores Registrados ({len(st.session_state['jogadores'])}):**")
             
             if st.session_state["jogadores"]:
-                # Converte para DataFrame estruturado
                 df_jogadores = pd.DataFrame(st.session_state["jogadores"])[["id", "nome", "entidade"]]
                 
                 if is_admin:
                     st.info("💡 **Gerenciador Ativo:** Dê dois cliques em uma célula para editar o Nome/CTG. Selecione a linha clicando na lateral esquerda e aperte 'Delete' no teclado para excluir um competidor.")
                     
-                    # Planilha interativa à prova de erros de concorrência
                     df_editado = st.data_editor(
                         df_jogadores,
                         column_config={
@@ -705,7 +707,6 @@ else:
                         key="editor_competidores_tabela"
                     )
                     
-                    # Reconstrói e higieniza a lista mapeada se houver modificações na tabela
                     lista_sincronizada = []
                     for idx, row in df_editado.iterrows():
                         if str(row["nome"]).strip():
@@ -720,7 +721,6 @@ else:
                         salvar_estado_no_disco()
                         st.rerun()
                 else: 
-                    # Exibição estática limpa para modo espectador público
                     st.dataframe(df_jogadores, hide_index=True, use_container_width=True)
                 
             if is_admin and len(st.session_state["jogadores"]) >= 4:
