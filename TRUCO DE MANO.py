@@ -561,7 +561,6 @@ else:
                     with aba_cad_unico:
                         col_nj, col_ctg = st.columns([60, 40])
                         with col_nj:
-                            # Removido o parâmetro key para evitar conflitos de SessionState
                             nj = st.text_input("Nome do Competidor:")
                         with col_ctg:
                             nctg = st.text_input("Entidade / CTG (Opcional):")
@@ -605,7 +604,6 @@ else:
                             </div>
                         """, unsafe_allow_html=True)
                         
-                        # Mantida apenas uma atribuição simples sem chaves que travam o renderizador
                         lista_colada = st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJoão Silva;CTG Sentinela\nPedro Souza;CTG Farroupilha")
                         
                         if st.button("📥 Processar e Inserir Lista", type="primary"):
@@ -637,8 +635,27 @@ else:
             if st.session_state["jogadores"]:
                 if is_admin:
                     for idx, jogador in enumerate(st.session_state["jogadores"]):
+                        
+                        # --- FILTRO PROTETOR CONTRA DICIONÁRIOS INTERNOS NA LISTA ---
+                        nome_exibicao = jogador
+                        if isinstance(jogador, dict):
+                            nome_exibicao = jogador.get('nome', '')
+                            if jogador.get('entidade') and jogador['entidade'] != 'AVULSO':
+                                nome_exibicao += f" | {jogador['entidade']}"
+                        elif isinstance(jogador, str) and "{" in jogador and "'nome':" in jogador:
+                            try:
+                                import ast
+                                d = ast.literal_eval(jogador)
+                                nome_exibicao = d.get('nome', '')
+                                if d.get('entidade') and d['entidade'] != 'AVULSO':
+                                    nome_exibicao += f" | {d['entidade']}"
+                            except:
+                                nome_exibicao = jogador
+                        # -----------------------------------------------------------
+
                         c_nome, c_edit, c_excluir = st.columns([70, 15, 15])
-                        with c_nome: st.markdown(f"<p style='padding:8px; background-color:#0d301b; border-radius:6px; font-weight:bold; border: 1px solid #ffb703;'>🔹 {jogador}</p>", unsafe_allow_html=True)
+                        with c_nome: 
+                            st.markdown(f"<p style='padding:8px; background-color:#0d301b; border-radius:6px; font-weight:bold; border: 1px solid #ffb703;'>🔹 {nome_exibicao}</p>", unsafe_allow_html=True)
                         with c_edit:
                             st.markdown('<div class="botao-editar">', unsafe_allow_html=True)
                             if st.button("✏️", key=f"btn_edit_{idx}"): st.session_state["jogador_sendo_editado"] = idx; st.rerun()
@@ -649,13 +666,29 @@ else:
                                 st.session_state["jogadores"].pop(idx)
                                 salvar_estado_no_disco(); st.rerun()
                             st.markdown('</div>', unsafe_allow_html=True)
-                else: st.info(", ".join(st.session_state["jogadores"]))
+                else: 
+                    st.info(", ".join([j.get('nome', str(j)) if isinstance(j, dict) else str(j) for j in st.session_state["jogadores"]]))
                 
             if is_admin and len(st.session_state["jogadores"]) >= 4:
                 st.markdown("---")
                 if st.button("🃏 GERAR CHAVES E DISPARAR TORNEIO"):
                     st.session_state["nome_torneio"] = nome_t
-                    st.session_state["classificacao"] = pd.DataFrame({'Jogador': st.session_state["jogadores"], 'Vitorias': 0, 'Sets_Ganhos': 0, 'Tentos_Pro': 0, 'Tentos_Contra': 0, 'Saldo_Tentos': 0, 'Flores': 0}).set_index('Jogador')
+                    # Tratamento extra na hora de criar o DataFrame de classificação
+                    jogadores_limpos = []
+                    for j in st.session_state["jogadores"]:
+                        if isinstance(j, dict): 
+                            jogadores_limpos.append(j.get('nome', 'Sem Nome'))
+                        elif isinstance(j, str) and "{" in j:
+                            try:
+                                import ast
+                                d = ast.literal_eval(j)
+                                jogadores_limpos.append(d.get('nome', j))
+                            except:
+                                jogadores_limpos.append(j)
+                        else:
+                            jogadores_limpos.append(j)
+                            
+                    st.session_state["classificacao"] = pd.DataFrame({'Jogador': jogadores_limpos, 'Vitorias': 0, 'Sets_Ganhos': 0, 'Tentos_Pro': 0, 'Tentos_Contra': 0, 'Saldo_Tentos': 0, 'Flores': 0}).set_index('Jogador')
                     st.session_state["torneio_iniciado"] = True
                     gerar_rodada_web(); st.rerun()
         else:
