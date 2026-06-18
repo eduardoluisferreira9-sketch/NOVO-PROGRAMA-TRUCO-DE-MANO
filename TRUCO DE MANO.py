@@ -526,6 +526,22 @@ with st.sidebar:
             st.session_state["cronometro_ativo"] = False
             salvar_estado_no_disco()
             st.rerun()
+            
+        # 🚨 BOTÃO DE RESET TOTAL DO TORNEIO
+        st.markdown("---")
+        st.markdown("### ⚠️ Zona de Perigo")
+        if st.button("🚨 RESETAR TODO O TORNEIO", type="primary", use_container_width=True):
+            st.session_state["jogadores"] = []
+            st.session_state["torneio_iniciado"] = False
+            st.session_state["cronometro_ativo"] = False
+            st.session_state["hora_inicio_rodada"] = None
+            st.session_state["em_matamata"] = False
+            if "placares_rodada_atual" in st.session_state:
+                st.session_state["placares_rodada_atual"] = {}
+            if "confrontos" in st.session_state:
+                st.session_state["confrontos"] = []
+            salvar_estado_no_disco()
+            st.rerun()
 
 # --- INTERFACE PRINCIPAL ---
 st.markdown(f"<h1 style='text-align:center; color:#ffb703; font-weight:900; margin-top:0;'>🃏 {st.session_state.get('nome_torneio', 'Torneio de Truco')}</h1>", unsafe_allow_html=True)
@@ -535,7 +551,6 @@ modo_exibicao = st.radio("Selecione o Modo de Visualização da Tela:", ["Arena 
 if modo_exibicao == "🖥️ MODO TELÃO DE PROJETOR (Automático)":
     st.markdown("<h2 style='text-align:center; color:#ffb703; margin-bottom:20px;'>📺 QUADRO OFICIAL DE CONFRONTOS</h2>", unsafe_allow_html=True)
     
-    # 1. Cronômetro Gigante Centralizado
     if st.session_state["cronometro_ativo"] and st.session_state["hora_inicio_rodada"]:
         tl = st.session_state["hora_inicio_rodada"] + timedelta(minutes=45)
         tr = tl - datetime.now()
@@ -544,7 +559,6 @@ if modo_exibicao == "🖥️ MODO TELÃO DE PROJETOR (Automático)":
         else:
             st.markdown('<div class="cronometro-box-gigante" style="border-color:#ff3232;"><div class="cronometro-tempo" style="color:#ff3232 !important;">⏰ TEMPO ESGOTADO</div></div>', unsafe_allow_html=True)
     
-    # 2. Grid de Mesas em Tamanho Gigante
     if st.session_state["torneio_iniciado"]:
         if not st.session_state["em_matamata"]:
             grid_telao = st.columns(3)
@@ -590,7 +604,6 @@ else:
             st.markdown("### 🎮 Inscrições de Competidores")
             nome_t = st.text_input("Nome do Evento:", value="Torneio de Truco do CTG", key="nome_torneio_input")
             
-            # Sub-Abas de Cadastro
             aba_cad_unico, aba_cad_massa = st.tabs(["👤 Cadastro Individual", "📋 Importar do Excel / Lista"])
 
             with aba_cad_unico:
@@ -600,7 +613,7 @@ else:
                 with col_ctg:
                     nctg = st.text_input("Entidade / CTG (Opcional):", key="input_cad_unico_ctg")
                 
-                if st.button("➕ Cadastrar Competidor", type="secondary"):
+                if st.button("➕ Cadastrar Competidor", type="secondary", key="btn_cad_individual"):
                     if nj.strip():
                         nome_limpo = str(nj).upper().strip()
                         ctg_limpo = str(nctg).upper().strip() if nctg.strip() else "AVULSO"
@@ -630,10 +643,6 @@ else:
                             border: 1px solid #ffb703 !important;
                             font-family: monospace;
                         }
-                        div[data-baseweb="textarea"] {
-                            background-color: #05180e !important;
-                            border-radius: 6px;
-                        }
                     </style>
                 """, unsafe_allow_html=True)
 
@@ -641,25 +650,22 @@ else:
                     <div style="background-color:#0d301b; border: 2px solid #ffb703; padding:15px; border-radius:10px; margin-bottom:15px;">
                         <h4 style="color:#ffb703; margin-top:0; margin-bottom:10px;">📋 Importação Rápida de Planilha</h4>
                         <p style="color:#ffffff; font-size:0.9rem; margin:0;">
-                            💡 No seu Excel, selecione as colunas de <b>Nome</b> e <b>CTG</b>, copie (Ctrl+C) e cole no campo abaixo.<br>
-                            O sistema aceita o formato contendo ponto e vírgula <b>Nome;CTG</b> ou apenas o <b>Nome</b> por linha.
+                            💡 No seu Excel, selecione as colunas de <b>Nome</b> e <b>CTG</b>, copie (Ctrl+C) e cole no campo abaixo.
                         </p>
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # Criando o formulário com o método clássico para evitar bugs de hierarquia do Streamlit
-                meu_form = st.form(key="form_importacao_excel_novo")
-                lista_colada = meu_form.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJOÃO SILVA;CTG SENTINELA\nPEDRO SOUZA;CTG FARROUPILHA")
-                botao_processar = meu_form.form_submit_button("📥 Processar e Inserir Lista", type="primary")
+                # Sem st.form para evitar conflitos de escopo com o data_editor
+                lista_colada = st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJOÃO SILVA;CTG SENTINELA", key="txt_area_excel_direto")
                 
-                if botao_processar:
+                if st.button("📥 Processar e Inserir Lista", type="primary", key="btn_processar_excel_direto"):
                     if lista_colada.strip():
                         linhas = lista_colada.replace("\r", "").split("\n")
                         cont_importados = 0
                         nomes_existentes = [str(j["nome"]).upper().strip() for j in st.session_state["jogadores"]]
                         
                         for linha in linhas:
-                            linha_limpa = linha.strip()
+                            linha_limpa =  linha.strip()
                             if linha_limpa:
                                 if ";" in linha_limpa:
                                     partes = linha_limpa.split(";")
@@ -681,10 +687,7 @@ else:
                         
                         if cont_importados > 0:
                             salvar_estado_no_disco()
-                            st.toast(f"✔️ {cont_importados} novos competidores adicionados!", icon="🚀")
                             st.rerun()
-                        else:
-                            st.warning("Nenhum competidor novo ou inédito identificado na lista.")
                                     
             st.write(f"**Competidores Registrados ({len(st.session_state['jogadores'])}):**")
             
@@ -692,7 +695,7 @@ else:
                 df_jogadores = pd.DataFrame(st.session_state["jogadores"])[["id", "nome", "entidade"]]
                 
                 if is_admin:
-                    st.info("💡 **Gerenciador Ativo:** Dê dois cliques em uma célula para editar o Nome/CTG. Selecione a linha clicando na lateral esquerda e aperte 'Delete' no teclado para excluir um competidor.")
+                    st.info("💡 **Gerenciador Ativo:** Edite as células ou selecione a linha e aperte 'Delete'.")
                     
                     df_editado = st.data_editor(
                         df_jogadores,
@@ -728,14 +731,11 @@ else:
                 st.markdown('<div class="botao-grande-comando">', unsafe_allow_html=True)
                 if st.button("🃏 GERAR CHAVES E DISPARAR TORNEIO", key="btn_disparar_torneio"):
                     st.session_state["nome_torneio"] = nome_t
-                    
                     jogadores_limpos = [str(j["nome"]).upper().strip() for j in st.session_state["jogadores"]]
-                    
                     st.session_state["classificacao"] = pd.DataFrame({
                         'Jogador': jogadores_limpos, 'Vitorias': 0, 'Sets_Ganhos': 0, 
                         'Tentos_Pro': 0, 'Tentos_Contra': 0, 'Saldo_Tentos': 0, 'Flores': 0
                     }).set_index('Jogador')
-                    
                     st.session_state["torneio_iniciado"] = True
                     gerar_rodada_web()
                     st.rerun()
