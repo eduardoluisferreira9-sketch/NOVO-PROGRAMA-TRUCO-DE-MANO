@@ -25,7 +25,7 @@ st.markdown("""
     h1, h2, h3, h4, h5, h6 { color: #ffb703 !important; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 900; }
     
     /* ------------------------------------------------------------- */
-    /* NOVA AJUSTE: CORREÇÃO DO PAINEL DO DIRETOR (SIDEBAR)          */
+    /* CORREÇÃO DO PAINEL DO DIRETOR (SIDEBAR) E SEUS BOTÕES         */
     /* ------------------------------------------------------------- */
     /* Transforma a barra lateral cinza no visual escuro do torneio */
     section[data-testid="stSidebar"] {
@@ -45,6 +45,22 @@ st.markdown("""
     section[data-testid="stSidebar"] h2,
     section[data-testid="stSidebar"] h3 {
         color: #ffb703 !important;
+    }
+
+    /* CORREÇÃO DO BOTÃO "AUTENTICAR" (E outros da Sidebar): Texto Preto com Fundo Amarelo */
+    section[data-testid="stSidebar"] button {
+        background-color: #ffb703 !important;
+        color: #000000 !important;
+        font-weight: bold !important;
+        border: 1px solid #ffb703 !important;
+        transition: background-color 0.3s ease;
+    }
+
+    /* Efeito ao passar o mouse por cima do botão na sidebar */
+    section[data-testid="stSidebar"] button:hover {
+        background-color: #dda15e !important;
+        color: #000000 !important;
+        border-color: #dda15e !important;
     }
     
     /* ------------------------------------------------------------- */
