@@ -588,7 +588,7 @@ else:
     with aba_arena:
         if not st.session_state["torneio_iniciado"]:
             st.markdown("### 🎮 Inscrições de Competidores")
-            nome_t = st.text_input("Nome do Evento:", value="Torneio de Truco do CTG")
+            nome_t = st.text_input("Nome do Evento:", value="Torneio de Truco do CTG", key="nome_torneio_input")
             
             # Sub-Abas de Cadastro
             aba_cad_unico, aba_cad_massa = st.tabs(["👤 Cadastro Individual", "📋 Importar do Excel / Lista"])
@@ -596,9 +596,9 @@ else:
             with aba_cad_unico:
                 col_nj, col_ctg = st.columns([60, 40])
                 with col_nj:
-                    nj = st.text_input("Nome do Competidor:")
+                    nj = st.text_input("Nome do Competidor:", key="input_cad_unico_nome")
                 with col_ctg:
-                    nctg = st.text_input("Entidade / CTG (Opcional):")
+                    nctg = st.text_input("Entidade / CTG (Opcional):", key="input_cad_unico_ctg")
                 
                 if st.button("➕ Cadastrar Competidor", type="secondary"):
                     if nj.strip():
@@ -647,10 +647,10 @@ else:
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # Form isolado para garantir retenção de memória e sanitização de carriage returns (\r)
-                with st.form("form_importacao_excel", clear_on_submit=True):
-                    lista_colada = st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJOÃO SILVA;CTG SENTINELA\nPEDRO SOUZA;CTG FARROUPILHA")
-                    botao_processar = st.form_submit_button("📥 Processar e Inserir Lista", type="primary")
+                # Criando o formulário com o método clássico para evitar bugs de hierarquia do Streamlit
+                meu_form = st.form(key="form_importacao_excel_novo")
+                lista_colada = meu_form.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJOÃO SILVA;CTG SENTINELA\nPEDRO SOUZA;CTG FARROUPILHA")
+                botao_processar = meu_form.form_submit_button("📥 Processar e Inserir Lista", type="primary")
                 
                 if botao_processar:
                     if lista_colada.strip():
@@ -726,7 +726,7 @@ else:
             if is_admin and len(st.session_state["jogadores"]) >= 4:
                 st.markdown("---")
                 st.markdown('<div class="botao-grande-comando">', unsafe_allow_html=True)
-                if st.button("🃏 GERAR CHAVES E DISPARAR TORNEIO"):
+                if st.button("🃏 GERAR CHAVES E DISPARAR TORNEIO", key="btn_disparar_torneio"):
                     st.session_state["nome_torneio"] = nome_t
                     
                     jogadores_limpos = [str(j["nome"]).upper().strip() for j in st.session_state["jogadores"]]
