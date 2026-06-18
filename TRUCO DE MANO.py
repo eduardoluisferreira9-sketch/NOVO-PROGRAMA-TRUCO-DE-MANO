@@ -529,7 +529,7 @@ if modo_exibicao == "🖥️ MODO TELÃO DE PROJETOR (Automático)":
 else:
     aba_arena, aba_tabela, aba_historico = st.tabs(["⚔️ Arena de Confrontos", "📊 Classificação & Auditoria", "📜 Galeria de Campeões"])
 
-   with aba_arena:
+    with aba_arena:
         if not st.session_state["torneio_iniciado"]:
             st.markdown("### 🎮 Inscrições de Competidores")
             nome_t = st.text_input("Nome do Evento:", value="Torneio de Truco do CTG")
