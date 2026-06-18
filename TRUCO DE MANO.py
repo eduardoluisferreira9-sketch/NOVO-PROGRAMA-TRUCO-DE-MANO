@@ -544,7 +544,7 @@ else:
                     p_ctg = nome_antigo.split(" | ")[1] if " | " in nome_antigo else ""
                     
                     with st.form("form_edicao"):
-                        novo_nome = st.text_input("Corrigir Nome / Dupla:", value=p_nome)
+                        novo_nome = st.text_input("Corrigir Nome:", value=p_nome)
                         novo_ctg = st.text_input("Corrigir Entidade / CTG:", value=p_ctg)
                         col_b1, col_b2 = st.columns(2)
                         with col_b1:
@@ -563,7 +563,7 @@ else:
                         with st.form("cad_individual", clear_on_submit=True):
                             col_nj, col_ctg = st.columns([60, 40])
                             with col_nj:
-                                nj = st.text_input("Nome do Competidor / Dupla:")
+                                nj = st.text_input("Nome do Competidor:")
                             with col_ctg:
                                 nctg = st.text_input("Entidade / CTG (Opcional):")
                             
