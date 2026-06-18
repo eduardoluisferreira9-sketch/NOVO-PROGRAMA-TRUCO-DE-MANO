@@ -573,9 +573,36 @@ else:
                                 salvar_estado_no_disco(); st.rerun()
                                 
                     with aba_cad_massa:
-                        st.info("💡 Copie as colunas do seu Excel (Nome e CTG) e cole no campo abaixo. Formato aceito: 'Nome;CTG' ou apenas 'Nome' (um por linha).")
-                        lista_colada = st.text_area("Cole as linhas do Excel aqui:", height=150, placeholder="Exemplo:\nJoão Silva;CTG Sentinela\nPedro Souza;CTG Farroupilha")
-                        if st.button("📥 Processar e Inserir Lista"):
+                        # Estilização forçada para a caixa de texto não ficar branca com texto branco
+                        st.markdown("""
+                            <style>
+                                div[data-baseweb="textarea"] textarea {
+                                    color: #ffffff !important;
+                                    background-color: #05180e !important;
+                                    border: 1px solid #ffb703 !important;
+                                    font-family: monospace;
+                                }
+                                div[data-baseweb="textarea"] {
+                                    background-color: #05180e !important;
+                                    border-radius: 6px;
+                                }
+                            </style>
+                        """, unsafe_allow_html=True)
+
+                        # Quadro Verde com Borda Amarela padrão do seu sistema
+                        st.markdown("""
+                            <div style="background-color:#0d301b; border: 2px solid #ffb703; padding:15px; border-radius:10px; margin-bottom:15px;">
+                                <h4 style="color:#ffb703; margin-top:0; margin-bottom:10px;">📋 Importação Rápida de Planilha</h4>
+                                <p style="color:#ffffff; font-size:0.9rem; margin:0;">
+                                    💡 No seu Excel, selecione as colunas de <b>Nome</b> e <b>CTG</b>, copie (Ctrl+C) e cole no campo abaixo.<br>
+                                    O sistema aceita o formato <b>Nome;CTG</b> ou apenas <b>Nome</b> (um por linha).
+                                </p>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                        lista_colada = st.text_area("Dados Copiados do Excel:", height=150, placeholder="Exemplo:\nJoão Silva;CTG Sentinela\nPedro Souza;CTG Farroupilha", key="txt_excel_import")
+                        
+                        if st.button("📥 Processar e Inserir Lista", type="primary"):
                             if lista_colada.strip():
                                 linhas = lista_colada.split("\n")
                                 cont_importados = 0
@@ -584,7 +611,7 @@ else:
                                         if ";" in linha:
                                             partes = linha.split(";")
                                             c_nome = partes[0].strip()
-                                            c_ctg = partes[1].strip()
+                                            c_ctg = partes[1].strip() if len(partes) > 1 else ""
                                             registro = f"{c_nome} | {c_ctg}" if c_ctg else c_nome
                                         else:
                                             registro = linha.strip()
