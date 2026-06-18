@@ -538,22 +538,65 @@ else:
                 if st.session_state.get("jogador_sendo_editado") is not None:
                     idx_edit = st.session_state["jogador_sendo_editado"]
                     nome_antigo = st.session_state["jogadores"][idx_edit]
+                    
+                    # Tenta quebrar o nome antigo para preencher a edição se houver CTG
+                    p_nome = nome_antigo.split(" | ")[0] if " | " in nome_antigo else nome_antigo
+                    p_ctg = nome_antigo.split(" | ")[1] if " | " in nome_antigo else ""
+                    
                     with st.form("form_edicao"):
-                        novo_nome = st.text_input("Corrigir Nome:", value=nome_antigo)
+                        novo_nome = st.text_input("Corrigir Nome / Dupla:", value=p_nome)
+                        novo_ctg = st.text_input("Corrigir Entidade / CTG:", value=p_ctg)
                         col_b1, col_b2 = st.columns(2)
                         with col_b1:
                             if st.form_submit_button("💾 Salvar") and novo_nome.strip():
-                                st.session_state["jogadores"][idx_edit] = novo_nome.strip()
+                                texto_salvar = f"{novo_nome.strip()} | {novo_ctg.strip()}" if novo_ctg.strip() else novo_nome.strip()
+                                st.session_state["jogadores"][idx_edit] = texto_salvar
                                 st.session_state["jogador_sendo_editado"] = None
                                 salvar_estado_no_disco(); st.rerun()
                         with col_b2:
                             if st.form_submit_button("❌ Cancelar"): st.session_state["jogador_sendo_editado"] = None; st.rerun()
                 else:
-                    with st.form("cad", clear_on_submit=True):
-                        nj = st.text_input("Nome do Competidor:")
-                        if st.form_submit_button("➕ Cadastrar Competidor") and nj:
-                            st.session_state["jogadores"].append(nj.strip())
-                            salvar_estado_no_disco(); st.rerun()
+                    # layout de abas para inscrição individual vs em massa (Excel)
+                    aba_cad_unico, aba_cad_massa = st.tabs(["👤 Cadastro Individual", "📋 Importar do Excel / Lista"])
+                    
+                    with aba_cad_unico:
+                        with st.form("cad_individual", clear_on_submit=True):
+                            col_nj, col_ctg = st.columns([60, 40])
+                            with col_nj:
+                                nj = st.text_input("Nome do Competidor / Dupla:")
+                            with col_ctg:
+                                nctg = st.text_input("Entidade / CTG (Opcional):")
+                            
+                            if st.form_submit_button("➕ Cadastrar Competidor") and nj:
+                                texto_completo = f"{nj.strip()} | {nctg.strip()}" if nctg.strip() else nj.strip()
+                                st.session_state["jogadores"].append(texto_completo)
+                                salvar_estado_no_disco(); st.rerun()
+                                
+                    with aba_cad_massa:
+                        st.info("💡 Copie as colunas do seu Excel (Nome e CTG) e cole no campo abaixo. Formato aceito: 'Nome;CTG' ou apenas 'Nome' (um por linha).")
+                        lista_colada = st.text_area("Cole as linhas do Excel aqui:", height=150, placeholder="Exemplo:\nJoão Silva;CTG Sentinela\nPedro Souza;CTG Farroupilha")
+                        if st.button("📥 Processar e Inserir Lista"):
+                            if lista_colada.strip():
+                                linhas = lista_colada.split("\n")
+                                cont_importados = 0
+                                for linha in linhas:
+                                    if linha.strip():
+                                        if ";" in linha:
+                                            partes = linha.split(";")
+                                            c_nome = partes[0].strip()
+                                            c_ctg = partes[1].strip()
+                                            registro = f"{c_nome} | {c_ctg}" if c_ctg else c_nome
+                                        else:
+                                            registro = linha.strip()
+                                        
+                                        if registro not in st.session_state["jogadores"]:
+                                            st.session_state["jogadores"].append(registro)
+                                            cont_importados += 1
+                                if cont_importados > 0:
+                                    st.success(f"✔️ {cont_importados} competidores importados com sucesso!")
+                                    salvar_estado_no_disco(); st.rerun()
+                                else:
+                                    st.warning("Nenhum competidor novo para adicionar.")
                             
             st.write(f"**Competidores Registrados ({len(st.session_state['jogadores'])}):**")
             if st.session_state["jogadores"]:
@@ -589,7 +632,6 @@ else:
             with c_m3:
                 rei_f = "Ninguém" if st.session_state["classificacao"] is None else str(st.session_state["classificacao"]['Flores'].idxmax())
                 st.markdown(f'<div class="metric-panel"><div class="metric-val">🌸 {rei_f[:12]}</div><div class="metric-lbl">Líder das Flores</div></div>', unsafe_allow_html=True)
-
 
 # ==========================================
 # PLAYOFFS, AUDITORIA E HONRA (PARTE 4)
