@@ -613,7 +613,7 @@ else:
                                 for linha in linhas:
                                     if linha.strip():
                                         if ";" in linha:
-                                            partes = linha.split(";")
+                                            partes = inline.split(";")
                                             c_nome = partes[0].strip()
                                             c_ctg = partes[1].strip() if len(partes) > 1 else ""
                                             registro = f"{c_nome} | {c_ctg}" if c_ctg else c_nome
@@ -671,6 +671,26 @@ else:
                 
             if is_admin and len(st.session_state["jogadores"]) >= 4:
                 st.markdown("---")
+                
+                # --- CSS EXCLUSIVO INJETADO PARA FORÇAR O TEXTO ESCURO NO BOTÃO DE DISPARAR ---
+                st.markdown("""
+                    <style>
+                        div.botao-grande-comando button {
+                            color: #05180e !important;
+                            font-weight: 900 !important;
+                            background-color: #ffffff !important;
+                            border: 2px solid #ffb703 !important;
+                            width: 100% !important;
+                            padding: 10px !important;
+                        }
+                        div.botao-grande-comando button:hover {
+                            color: #ffffff !important;
+                            background-color: #ffb703 !important;
+                        }
+                    </style>
+                """, unsafe_allow_html=True)
+                
+                st.markdown('<div class="botao-grande-comando">', unsafe_allow_html=True)
                 if st.button("🃏 GERAR CHAVES E DISPARAR TORNEIO"):
                     st.session_state["nome_torneio"] = nome_t
                     # Tratamento extra na hora de criar o DataFrame de classificação
@@ -691,6 +711,7 @@ else:
                     st.session_state["classificacao"] = pd.DataFrame({'Jogador': jogadores_limpos, 'Vitorias': 0, 'Sets_Ganhos': 0, 'Tentos_Pro': 0, 'Tentos_Contra': 0, 'Saldo_Tentos': 0, 'Flores': 0}).set_index('Jogador')
                     st.session_state["torneio_iniciado"] = True
                     gerar_rodada_web(); st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
         else:
             c_m1, c_m2, c_m3 = st.columns(3)
             with c_m1: st.markdown(f'<div class="metric-panel"><div class="metric-val">{len(st.session_state["jogadores"])}</div><div class="metric-lbl">Inscritos na Arena</div></div>', unsafe_allow_html=True)
